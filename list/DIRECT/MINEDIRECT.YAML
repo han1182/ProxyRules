@@ -3,7 +3,6 @@ payload:
   - DOMAIN-SUFFIX,v1.wzip.download
   - DOMAIN-SUFFIX,v2.wzip.date
   - DOMAIN-SUFFIX,v2.wzip.download
-
   - DOMAIN,integration.vless-bart.sbs
   - DOMAIN-SUFFIX,vless-bart.sbs
   - DOMAIN-KEYWORD,vless-bart
@@ -14,3 +13,14 @@ payload:
   - DOMAIN-SUFFIX,quick-edit-cny.pages.dev
   - DOMAIN,quick-edit-cny.pages.dev
   - DOMAIN-SUFFIX,cloudflare.com
+  - DOMAIN-SUFFIX,firstory.me
+  - DOMAIN,files.firstort-file.me
+  - DOMAIN,m.cdn.firstory.me
+  - DOMAIN,launchermeta.mojang.com
+  - DOMAIN,media.forgecdn.net
+  - DOMAIN,api.curseforge.com
+  - DOMAIN-SUFFIX,getafreenode.com
+  - DOMAIN-SUFFIX,gytmh.com
+  - DOMAIN-SUFFIX,blog.imoe.men
+  - DOMAIN,scanner.github1.cloud
+  - DOMAIN,xboxlive.com
