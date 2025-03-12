@@ -1,0 +1,5 @@
+payload:
+  - DOMAIN-SUFFIX,v1.wzip.date
+  - DOMAIN-SUFFIX,v1.wzip.download
+  - DOMAIN-SUFFIX,v2.wzip.date
+  - DOMAIN-SUFFIX,v2.wzip.download
