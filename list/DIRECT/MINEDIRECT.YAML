@@ -3,3 +3,14 @@ payload:
   - DOMAIN-SUFFIX,v1.wzip.download
   - DOMAIN-SUFFIX,v2.wzip.date
   - DOMAIN-SUFFIX,v2.wzip.download
+
+  - DOMAIN,integration.vless-bart.sbs
+  - DOMAIN-SUFFIX,vless-bart.sbs
+  - DOMAIN-KEYWORD,vless-bart
+  - DOMAIN,dash.cloudflare.com
+  - DOMAIN,platform.dash.cloudflare.com
+  - DOMAIN-KEYWORD,cloudflare
+  - DOMAIN,challenges.cloudflare.com
+  - DOMAIN-SUFFIX,quick-edit-cny.pages.dev
+  - DOMAIN,quick-edit-cny.pages.dev
+  - DOMAIN-SUFFIX,cloudflare.com
