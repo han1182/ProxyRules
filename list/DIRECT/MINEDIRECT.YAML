@@ -57,3 +57,4 @@ payload:
   - DOMAIN,scanner.github1.cloud
   - DOMAIN-SUFFIX,xboxlive.com
   - DOMAIN-SUFFIX,modrinth.com
+  - DOMAIN-SUFFIX,tampermonkey.net
