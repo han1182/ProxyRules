@@ -56,4 +56,4 @@ payload:
   - DOMAIN-SUFFIX,blog.imoe.men
   - DOMAIN,scanner.github1.cloud
   - DOMAIN,xboxlive.com
-  - DOMAIN,modrinth.com
+  - DOMAIN,api.modrinth.com
