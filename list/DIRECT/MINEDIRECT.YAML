@@ -1,4 +1,6 @@
 payload:
+  -DOMAIN-SUFFIX,zongyunti.com
+  - DOMAIN-SUFFIX,jiasu.la
   - DOMAIN-SUFFIX,minecraft.net
   - DOMAIN-SUFFIX,vless-bart.sbs
   - DOMAIN-SUFFIX,ymgjmh.com
