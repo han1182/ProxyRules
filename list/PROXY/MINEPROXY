@@ -1,1 +1,2 @@
-temu.com
+payload:
+  - DOMAIN-SUFFIX,temu.com
