@@ -1,4 +1,5 @@
 payload:
+  - DOMAIN,rssfind.val.run
   - DOMAIN-SUFFIX,userscript.zone
   - DOMAIN-SUFFIX,spaceship.com
   - DOMAIN-SUFFIX,starsail.cloud
