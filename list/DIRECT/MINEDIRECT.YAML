@@ -1,5 +1,5 @@
 payload:
-  -DOMAIN,storeedgefd.dsx.mp.microsoft.com
+  - DOMAIN,storeedgefd.dsx.mp.microsoft.com
   - DOMAIN,cdn.storeedgefd.dsx.mp.microsoft.com
   - DOMAIN-SUFFIX,05200420.xyz
   - DOMAIN,rssfind.val.run
