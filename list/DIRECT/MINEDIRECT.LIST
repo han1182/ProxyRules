@@ -9,11 +9,8 @@ DOMAIN,edge.forgecdn.net
 # Windows检测是否连接到互联网地址
 DOMAIN,www.msftconnecttest.com
 DOMAIN,www.msftncsi.com
-DOMAIN,ipv6.msftconnecttest.com
 DOMAIN-SUFFIX,msftconnecttest.com
 DOMAIN-SUFFIX,msftncsi.com
-DOMAIN,dns.msftncsi.com
 DOMAIN,ctldl.windowsupdate.com
 DOMAIN-SUFFIX,time.windows.com
 DOMAIN-SUFFIX,pool.ntp.org
-DOMAIN-SUFFIX,ncsi.com
