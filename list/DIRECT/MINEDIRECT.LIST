@@ -17,3 +17,14 @@ DOMAIN-SUFFIX,msftncsi.com
 DOMAIN,ctldl.windowsupdate.com
 DOMAIN-SUFFIX,time.windows.com
 DOMAIN-SUFFIX,pool.ntp.org
+
+DOMAIN-SUFFIX,firstory.me
+DOMAIN,files.firstort-file.me
+DOMAIN,m.cdn.firstory.me
+DOMAIN,launchermeta.mojang.com
+DOMAIN,media.forgecdn.net
+DOMAIN,api.curseforge.com
+DOMAIN-SUFFIX,getafreenode.com
+DOMAIN-SUFFIX,gytmh.com
+DOMAIN-SUFFIX,blog.imoe.men
+DOMAIN,scanner.github1.cloud
