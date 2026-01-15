@@ -1,6 +1,9 @@
 DOMAIN,accounts.tampermonkey.net
 DOMAIN,outlook.office.com
 DOMAIN,outlook.office365.com
+DOMAIN,officeclient.microsoft.com
+DOMAIN,messaging.engagement.office.com
+DOMAIN,skydrive.wns.windows.com
 DOMAIN-SUFFIX,live.com
 DOMAIN-SUFFIX,hotmail.com
 DOMAIN,cdn.modrinth.com
