@@ -1,2 +1,3 @@
 DOMAIN-SUFFIX,adobe.io
 DOMAIN-REGEX,^.*\.adobe\.io$
+DOMAIN-REGEX,^.*\.adobestarts\.io$
