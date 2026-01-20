@@ -5,7 +5,7 @@ DOMAIN-KEYWORD,z-library
 
 DOMAIN-KEYWORD,wnacg
 DOMAIN-KEYWORD,wnimg
-DOMAIN,t4.qy0.ru
 DOMAIN-KEYWORD,wzip
 DOMAIN-KEYWORD,itsacg
+DOMAIN-SUFFIX,qy0.ru
 DOMAIN-REGEX,^www\.wn\d{2}\.ru$
