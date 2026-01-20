@@ -1,2 +1,2 @@
 DOMAIN-SUFFIX,adobe.io
-DOMAIN-KEYWORD,adobe
+DOMAIN-REGEX,^.*\.adobe\.io$
