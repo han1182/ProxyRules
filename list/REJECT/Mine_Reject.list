@@ -2,3 +2,11 @@ DOMAIN-SUFFIX,adobe.io
 DOMAIN-REGEX,^.*\.adobe\.io$
 DOMAIN-REGEX,^.*\.adobestats\.io$
 DOMAIN-REGEX,^.*\.adobegenuine\.com$
+DOMAIN,ntp.msn.com
+DOMAIN,assets.msn.cn
+DOMAIN,img-s-msn-com.akamaized.net
+DOMAIN,www.msn.com
+DOMAIN,global.msn.com
+DOMAIN,api.msn.com
+DOMAIN,browser.events.data.msn.com
+DOMAIN,img-s-msn-com.akamaized.net
