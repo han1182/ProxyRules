@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+  <!-- 背景渐变 -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e3c72"/>
+      <stop offset="100%" stop-color="#2a5298"/>
+    </linearGradient>
+    <radialGradient id="circleGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#00ffcc" stop-opacity="0.6"/>
+    </radialGradient>
+  </defs>
+
+  <!-- 背景矩形 -->
+  <rect width="400" height="300" fill="url(#bg)" />
+
+  <!-- 中心圆形象征地球与团结 -->
+  <circle cx="200" cy="150" r="80" fill="url(#circleGrad)" />
+
+  <!-- 四个象征方向的三角形，代表开放与交流 -->
+  <polygon points="200,40 190,70 210,70" fill="#ffd700"/>
+  <polygon points="200,260 190,230 210,230" fill="#ffd700"/>
+  <polygon points="40,150 70,140 70,160" fill="#ffd700"/>
+  <polygon points="360,150 330,140 330,160" fill="#ffd700"/>
+
+  <!-- 中心小白星，象征希望 -->
+  <polygon points="200,130 207,145 223,145 210,155 215,170 200,162 185,170 190,155 177,145 193,145"
+           fill="#ffffff"/>
+</svg>
