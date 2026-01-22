@@ -24,9 +24,10 @@ DOMAIN-SUFFIX,ypncdn.com
 DOMAIN,haijiao999.com
 
 # wnacg 绅士漫画
+DOMAIN,wnlink.ru
+DOMAIN-KEYWORD,wzip
 DOMAIN-KEYWORD,wnacg
 DOMAIN-KEYWORD,wnimg
-DOMAIN-KEYWORD,wzip
 DOMAIN-KEYWORD,itsacg
 DOMAIN-SUFFIX,qy0.ru
 DOMAIN-REGEX,^www\.wn\d{2}\.ru$
