@@ -2,7 +2,6 @@ DOMAIN,cloudflare-ech.com
 DOMAIN,cz.197942.com
 DOMAIN,cr11.qweqwi.com
 
-
 # Mac Download
 PROCESS-NAME,aria2c.exe
 PROCESS-NAME,fdm.exe
