@@ -33,4 +33,6 @@ DOMAIN-KEYWORD,wnacg
 DOMAIN-KEYWORD,wnimg
 DOMAIN-KEYWORD,itsacg
 DOMAIN-SUFFIX,qy0.ru
+DOMAIN-REGEX,^www\.wn\d{2}\.cfd$
 DOMAIN-REGEX,^www\.wn\d{2}\.ru$
+DOMAIN-REGEX,^www\.wn\d{2}\.shop$
