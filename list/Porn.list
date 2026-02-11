@@ -36,3 +36,7 @@ DOMAIN-SUFFIX,qy0.ru
 DOMAIN-REGEX,^www\.wn\d{2}\.cfd$
 DOMAIN-REGEX,^www\.wn\d{2}\.ru$
 DOMAIN-REGEX,^www\.wn\d{2}\.shop$
+
+DOMAIN-SUFFIX,e-hentai.org
+DOMAIN-SUFFIX,ehgt.org
+DOMAIN-SUFFIX,anchira.io
