@@ -25,6 +25,7 @@ DOMAIN,haijiao999.com
 DOMAIN,tube8.com
 DOMAIN,thumbzilla.com
 DOMAIN,youpron.com
+DOMAIN-KEYWORD,hanime
 
 # wnacg 绅士漫画
 DOMAIN,wnlink.ru
@@ -37,6 +38,10 @@ DOMAIN-REGEX,^www\.wn\d{2}\.cfd$
 DOMAIN-REGEX,^www\.wn\d{2}\.ru$
 DOMAIN-REGEX,^www\.wn\d{2}\.shop$
 
+# E站表站
 DOMAIN-SUFFIX,e-hentai.org
 DOMAIN-SUFFIX,ehgt.org
 DOMAIN-SUFFIX,anchira.io
+
+# 禁漫天堂
+DOMAIN-SUFFIX,18comic.vip
