@@ -1,6 +1,7 @@
 DOMAIN-KEYWORD,porn
 DOMAIN-KEYWORD,hanime
 DOMAIN-KEYWORD,hentai
+DOMAIN-SUFFIX,hembed.com
 DOMAIN-SUFFIX,8teenxxx.com
 DOMAIN-SUFFIX,ahcdn.com
 DOMAIN-SUFFIX,bcvcdn.com
@@ -27,8 +28,6 @@ DOMAIN,haijiao999.com
 DOMAIN,tube8.com
 DOMAIN,thumbzilla.com
 DOMAIN,youpron.com
-
-# wnacg 绅士漫画
 DOMAIN,wnlink.ru
 DOMAIN-KEYWORD,wzip
 DOMAIN-KEYWORD,wnacg
@@ -38,11 +37,7 @@ DOMAIN-SUFFIX,qy0.ru
 DOMAIN-REGEX,^www\.wn\d{2}\.cfd$
 DOMAIN-REGEX,^www\.wn\d{2}\.ru$
 DOMAIN-REGEX,^www\.wn\d{2}\.shop$
-
-# E站表站
 DOMAIN-SUFFIX,e-hentai.org
 DOMAIN-SUFFIX,ehgt.org
 DOMAIN-SUFFIX,anchira.io
-
-# 禁漫天堂
 DOMAIN-SUFFIX,18comic.vip
