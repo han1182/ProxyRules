@@ -9,6 +9,7 @@ DOMAIN,outlook.office365.com
 DOMAIN,officeclient.microsoft.com
 DOMAIN,messaging.engagement.office.com
 DOMAIN,skydrive.wns.windows.com
+DOMAIN,cdn.storeedgefd.dsx.mp.microsoft.com
 DOMAIN-SUFFIX,live.com
 DOMAIN-SUFFIX,hotmail.com
 DOMAIN,cdn.modrinth.com
