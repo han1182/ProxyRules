@@ -10,3 +10,4 @@ DOMAIN,global.msn.com
 DOMAIN,api.msn.com
 DOMAIN,browser.events.data.msn.com
 DOMAIN,img-s-msn-com.akamaized.net
+DOMAIN-SUFFIX,gdmf.apple.com # Apple设备检查更新
