@@ -12,7 +12,7 @@ DOMAIN-SUFFIX,hotmail.com
 DOMAIN-SUFFIX,modrinth.com
 DOMAIN-SUFFIX,mcimirror.top
 DOMAIN,edge.forgecdn.net
-
+DOMAIN,mon.zijieapi.com
 # Windows检测是否连接到互联网地址
 DOMAIN,www.msftconnecttest.com
 DOMAIN,www.msftncsi.com
