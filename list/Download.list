@@ -1,36 +1,70 @@
-DOMAIN,piston-data.mojang.com
-DOMAIN-SUFFIX,webgetstore.com
-DOMAIN,cloudflare-ech.com
-DOMAIN,cz.197942.com
-DOMAIN,cr11.qweqwi.com
+# ========================================
+# 下载 & BT & 游戏加速规则（优化版）
+# 优先放在规则列表较前面
+# ========================================
 
-# Mac Download
-PROCESS-NAME,aria2c.exe
-PROCESS-NAME,fdm.exe
-PROCESS-NAME,Folx.exe
-PROCESS-NAME,NetTransport.exe
-PROCESS-NAME,Thunder.exe
-PROCESS-NAME,Transmission.exe
-PROCESS-NAME,uTorrent.exe
-PROCESS-NAME,WebTorrent.exe
-PROCESS-NAME,WebTorrent Helper.exe
-PROCESS-NAME,qbittorrent.exe
-PROCESS-NAME,BitComet.exe
-# bt
-DOMAIN-SUFFIX,smtp
-DOMAIN-KEYWORD,aria2
-URL-REGEX,(Subject|HELO|SMTP)
-URL-REGEX,(api|ps|sv|offnavi|newvector|ulog.imap|newloc)(.map|).(baidu|n.shifen).com
-URL-REGEX,(.+.|^)(360|so|qihoo|360safe|qhimg|360totalsecurity|yunpan).(cn|com)
-URL-REGEX,(.+.)?(torrent|announce.php?passkey=|tracker|BitTorrent|bt_key|ed2k|find_node|get_peers|info_hash|magnet:|peer_id=|xunlei)(..+)?
-# XunLei
-URL-REGEX,(.?)(xunlei|sandai|Thunder|XLLiveUD)(.)
-PROCESS-NAME,DownloadService.exe
-# 360
-URL-REGEX,(.+\.|^)(360|so)\.(cn|com)
-# Tencent Weiyun
-PROCESS-NAME,Weiyun.exe
-#Baidu disk
-PROCESS-NAME,baidunetdisk.exe
-# Xbox
-URL-REGEX,assets\d+\.xboxlive\.(com|cn)
+# ==================== 特定域名 ====================
+DOMAIN, piston-data.mojang.com
+DOMAIN-SUFFIX, webgetstore.com
+DOMAIN, cloudflare-ech.com
+DOMAIN, cz.197942.com
+DOMAIN, cr11.qweqwi.com
+
+# ==================== 精准下载 & 游戏 CDN ====================
+
+# Steam 下载专用（重要）
+DOMAIN-SUFFIX, steamcontent.com
+DOMAIN-SUFFIX, steamserver.net
+DOMAIN-SUFFIX, steamstatic.com
+DOMAIN, steamcdn-a.akamaihd.net
+
+# Epic Games 下载
+DOMAIN-SUFFIX, epicgames-download1.akamaized.net
+DOMAIN-SUFFIX, download.epicgames.com
+DOMAIN-SUFFIX, fastly-download.epicgames.com
+
+# Microsoft / Xbox 下载
+DOMAIN-SUFFIX, download.microsoft.com
+DOMAIN, assets.xboxlive.com
+URL-REGEX, assets\d+\.xboxlive\.(com|cn)
+
+# 其他常用下载源
+DOMAIN-SUFFIX, sourceforge.net
+DOMAIN-SUFFIX, archive.org
+DOMAIN-SUFFIX, cdn.jsdelivr.net
+DOMAIN-SUFFIX, huggingface.co
+DOMAIN-SUFFIX, cdn-lfs.hf.co
+
+# 中国云盘 / 下载补充
+DOMAIN-SUFFIX, baidupcs.com
+DOMAIN-SUFFIX, baidupcs.baidu.com
+DOMAIN-SUFFIX, dl.download.csdn.net
+
+# ==================== 下载器进程 ====================
+PROCESS-NAME, aria2c.exe
+PROCESS-NAME, fdm.exe
+PROCESS-NAME, Folx.exe
+PROCESS-NAME, NetTransport.exe
+PROCESS-NAME, Thunder.exe
+PROCESS-NAME, Transmission.exe
+PROCESS-NAME, uTorrent.exe
+PROCESS-NAME, WebTorrent.exe
+PROCESS-NAME, WebTorrent Helper.exe
+PROCESS-NAME, qbittorrent.exe
+PROCESS-NAME, BitComet.exe
+PROCESS-NAME, DownloadService.exe
+PROCESS-NAME, Weiyun.exe
+PROCESS-NAME, baidunetdisk.exe
+
+# ==================== BT & P2P ====================
+DOMAIN-KEYWORD, aria2
+DOMAIN-KEYWORD, tracker
+DOMAIN-KEYWORD, announce
+
+URL-REGEX, (torrent|announce\.php\?passkey=|tracker|BitTorrent|bt_key|ed2k|info_hash|magnet:|peer_id=)
+URL-REGEX, (xunlei|sandai|Thunder|XLLiveUD|find_node|get_peers)
+URL-REGEX, (api|ps|sv|offnavi|newvector|ulog\.imap|newloc)(\.map|\.)\.(baidu|n\.shifen)\.com
+URL-REGEX, (\.|^)(360|so|qihoo|360safe|qhimg|360totalsecurity|yunpan)\.(cn|com)
+
+# 邮件协议（强烈建议删除或改成 DIRECT）
+# DOMAIN-SUFFIX, smtp
