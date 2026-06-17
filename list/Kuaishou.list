@@ -21,3 +21,6 @@ DOMAIN,e.kuaishou.cn
 DOMAIN,e.kuaishou.com
 DOMAIN,log-sdk.gifshow.com
 DOMAIN,wlog.kuaishou.com
+
+DOMAIN-SUFFIX,dxsc.oppass.cn
+DOMAIN-SUFFIX,djvod.ndcimgs.com
