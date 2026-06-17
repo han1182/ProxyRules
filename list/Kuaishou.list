@@ -22,8 +22,15 @@ DOMAIN-SUFFIX,adkwai.com
 DOMAIN-SUFFIX,adukwai.com
 DOMAIN-SUFFIX,e.kuaishou.cn
 DOMAIN-SUFFIX,e.kuaishou.com
+DOMAIN-SUFFIX,shukwai.com
+DOMAIN-SUFFIX,shwkwai.com
+DOMAIN-SUFFIX,wskwai.com
+DOMAIN-SUFFIX,kwai.com
+DOMAIN-SUFFIX,kwai.net
 DOMAIN,log-sdk.gifshow.com
 DOMAIN,wlog.kuaishou.com
-
+DOMAIN,kwai.com
 DOMAIN-SUFFIX,dxsc.oppass.cn
 DOMAIN-SUFFIX,djvod.ndcimgs.com
+DOMAIN-REGEX,^[^.]+\.[^.]+kwai\.(com|net)$
+DOMAIN-REGEX,^[^.]+\.[^.]+kwaishou\.(cn|com|net)$
