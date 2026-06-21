@@ -13,6 +13,8 @@ DOMAIN-SUFFIX,modrinth.com
 DOMAIN-SUFFIX,mcimirror.top
 DOMAIN,edge.forgecdn.net
 # Windows检测是否连接到互联网地址
+DOMAIN,dns.msftncsi.com
+DOMAIN,ipv6.msftconnecttest.com
 DOMAIN,www.msftconnecttest.com
 DOMAIN,www.msftncsi.com
 DOMAIN-SUFFIX,msftconnecttest.com
