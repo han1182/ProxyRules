@@ -16,3 +16,4 @@ DOMAIN-SUFFIX,webkaka.com
 DOMAIN,challenge.cloudflare.com
 DOMAIN,challenges.cloudflare.com
 DOMAIN,stun.cloudflare.com
+DOMAIN,turn.cloudflare.com
