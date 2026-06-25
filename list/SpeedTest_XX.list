@@ -16,6 +16,7 @@ DOMAIN-SUFFIX,measurement-lab.org
 DOMAIN-SUFFIX,internethealthreport.org
 
 # 国外IP检测网站
+DOMAIN-SUFFIX,ip.sb
 DOMAIN-SUFFIX,ipinfo.io
 DOMAIN-SUFFIX,whatismyip.com
 DOMAIN-SUFFIX,whatismyipaddress.com
