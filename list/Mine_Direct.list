@@ -12,6 +12,7 @@ DOMAIN-SUFFIX,hotmail.com
 DOMAIN-SUFFIX,modrinth.com
 DOMAIN-SUFFIX,mcimirror.top
 DOMAIN,edge.forgecdn.net
+
 # Windows检测是否连接到互联网地址
 DOMAIN,dns.msftncsi.com
 DOMAIN,ipv6.msftconnecttest.com
@@ -29,6 +30,7 @@ DOMAIN,m.cdn.firstory.me
 DOMAIN,launchermeta.mojang.com
 DOMAIN,media.forgecdn.net
 DOMAIN,api.curseforge.com
+DOMAIN-SUFFIX,forgepixel.com
 DOMAIN-SUFFIX,getafreenode.com
 DOMAIN-SUFFIX,gytmh.com
 DOMAIN-SUFFIX,blog.imoe.men
