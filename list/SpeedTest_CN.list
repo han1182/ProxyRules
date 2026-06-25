@@ -11,3 +11,8 @@ DOMAIN-SUFFIX,speedtests.cn
 DOMAIN-SUFFIX,ip111.cn
 DOMAIN-SUFFIX,ip111.com
 DOMAIN-SUFFIX,webkaka.com
+
+# cloudflare质询页面
+DOMAIN,challenge.cloudflare.com
+DOMAIN,challenges.cloudflare.com
+DOMAIN,stun.cloudflare.com
