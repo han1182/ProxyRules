@@ -1,0 +1,56 @@
+# 国外测速网站
+DOMAIN-SUFFIX,speedtest.net
+DOMAIN-SUFFIX,fast.com
+DOMAIN-SUFFIX,testmy.net
+DOMAIN-SUFFIX,speedof.me
+DOMAIN-SUFFIX,dslreports.com
+DOMAIN-SUFFIX,speedgeo.net
+DOMAIN-SUFFIX,openspeedtest.com
+DOMAIN-SUFFIX,bandwidthplace.com
+DOMAIN-SUFFIX,speed.cloudflare.com
+DOMAIN-SUFFIX,cloudflare.com
+DOMAIN-SUFFIX,speedsmart.net
+DOMAIN-SUFFIX,highspeedinternet.com
+DOMAIN-SUFFIX,m-lab.org
+DOMAIN-SUFFIX,measurement-lab.org
+DOMAIN-SUFFIX,internethealthreport.org
+
+# 国外IP检测网站
+DOMAIN-SUFFIX,ipinfo.io
+DOMAIN-SUFFIX,whatismyip.com
+DOMAIN-SUFFIX,whatismyipaddress.com
+DOMAIN-SUFFIX,ip-api.com
+DOMAIN-SUFFIX,myip.com
+DOMAIN-SUFFIX,ip-location.net
+DOMAIN-SUFFIX,iplocation.net
+DOMAIN-SUFFIX,whoer.net
+DOMAIN-SUFFIX,iplocation.io
+DOMAIN-SUFFIX,db-ip.com
+DOMAIN-SUFFIX,ipqualityscore.com
+DOMAIN-SUFFIX,abuseipdb.com
+DOMAIN-SUFFIX,infosniper.net
+DOMAIN-SUFFIX,nordvpn.com
+DOMAIN-SUFFIX,whatismyip.live
+DOMAIN-SUFFIX,ipleak.net
+DOMAIN-SUFFIX,ipchicken.com
+
+# 国外DNS检测网站
+DOMAIN-SUFFIX,dnschecker.org
+DOMAIN-SUFFIX,dnsstuff.com
+DOMAIN-SUFFIX,dnsqueries.com
+DOMAIN-SUFFIX,whois.domaintools.com
+DOMAIN-SUFFIX,dnssec-analyzer.verisignlabs.com
+DOMAIN-SUFFIX,mxtoolbox.com
+DOMAIN-SUFFIX,nslookup.io
+DOMAIN-SUFFIX,intodns.com
+DOMAIN-SUFFIX,whatsmydns.net
+DOMAIN-SUFFIX,dnsleaktest.com
+DOMAIN-SUFFIX,browserleaks.com
+DOMAIN-SUFFIX,dig.web.id
+DOMAIN-SUFFIX,toolbox.googleapps.com
+DOMAIN-SUFFIX,hackertarget.com
+
+# 其他国外网络工具
+DOMAIN-SUFFIX,ping.pe
+DOMAIN-SUFFIX,viewdns.info
+DOMAIN-SUFFIX,dnsperf.com
