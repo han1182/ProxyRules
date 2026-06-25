@@ -34,6 +34,8 @@ DOMAIN-SUFFIX,nordvpn.com
 DOMAIN-SUFFIX,whatismyip.live
 DOMAIN-SUFFIX,ipleak.net
 DOMAIN-SUFFIX,ipchicken.com
+DOMAIN-SUFFIX,ipwho.is
+DOMAIN-SUFFIX,ipapi.is
 
 # 国外DNS检测网站
 DOMAIN-SUFFIX,dnschecker.org
