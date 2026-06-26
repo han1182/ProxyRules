@@ -37,6 +37,8 @@ DOMAIN-SUFFIX,ipwho.is
 DOMAIN-SUFFIX,ipapi.is
 
 # 国外DNS检测网站
+DOMAIN-SUFFIX,browserleaks.com
+DOMAIN-SUFFIX,dnsleaktest.com
 DOMAIN-SUFFIX,dnschecker.org
 DOMAIN-SUFFIX,dnsstuff.com
 DOMAIN-SUFFIX,dnsqueries.com
