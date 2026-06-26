@@ -37,6 +37,8 @@ DOMAIN-SUFFIX,ipwho.is
 DOMAIN-SUFFIX,ipapi.is
 
 # 国外DNS检测网站
+DOMAIN-SUFFIX,browserscan.net
+DOMAIN-SUFFIX,surfsharkdns.com
 DOMAIN-SUFFIX,browserleaks.com
 DOMAIN-SUFFIX,browserleaks.net
 DOMAIN-SUFFIX,browserleaks.org
