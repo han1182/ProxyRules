@@ -4,7 +4,7 @@
 # ========================================
 
 # ==================== 特定域名 ====================
-DOMAIN,raw.githubusercontent.com
+# DOMAIN,raw.githubusercontent.com
 DOMAIN,d-app6.i4.cn
 DOMAIN, piston-data.mojang.com
 DOMAIN-SUFFIX, webgetstore.com
