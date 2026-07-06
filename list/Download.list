@@ -34,6 +34,7 @@ DOMAIN-SUFFIX, fastly-download.epicgames.com
 # Microsoft / Xbox 下载
 DOMAIN-SUFFIX, download.microsoft.com
 DOMAIN, assets.xboxlive.com
+DOMAIN,cdn-alt.modrinth.com
 URL-REGEX, assets\d+\.xboxlive\.(com|cn)
 
 # 其他常用下载源
