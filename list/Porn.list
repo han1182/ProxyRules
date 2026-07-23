@@ -41,6 +41,7 @@ DOMAIN-REGEX,^www\.wn\d{2}\.cfd$
 DOMAIN-REGEX,^www\.wn\d{2}\.ru$
 DOMAIN-REGEX,^www\.wn\d{2}\.shop$
 DOMAIN-SUFFIX,e-hentai.org
+DOMAIN-SUFFIX,hdoujin.org
 DOMAIN-SUFFIX,ehgt.org
 DOMAIN-SUFFIX,anchira.io
 DOMAIN-SUFFIX,18comic.vip
