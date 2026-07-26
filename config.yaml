@@ -1,0 +1,1847 @@
+anchors: # 锚点
+
+  clashConfig: &clashConfig # Clash 主配置
+    mode: rule
+    ipv6: true
+    port: 7890
+    socks-port: 7891
+    redir-port: 7892
+    mixed-port: 7893
+    tproxy-port: 7895
+    allow-lan: true
+    bind-address: "*"
+    log-level: warning        # silent | error | warning | info | debug
+    find-process-mode: strict # 启用进程规则 off|strict|always
+    global-ua: clash.meta
+    etag-support: true        # 启用 ETag 支持 开启智能更新，只有内容变化时才会下载/false 每次都强制完整下载
+    unified-delay: true       # 开启统一延迟时，会计算 RTT，以消除连接握手等带来的不同类型节点的延迟差异
+    tcp-concurrent: true      # 是否开启 TCP 连接并发建立，开启后可以显著提升连接速度，但可能会增加服务器负载
+    udp: true                 # 全局开启UDP
+    memory-limit: "768M"      # 内存优化 “根据设备调整”
+    geoip-dat: "./geoip.dat"
+    geosite-dat: "./geosite.dat"
+    global-client-fingerprint: chrome
+    interface-name: ""               # 自动选择最佳网卡
+    keep-alive-idle: 30              # 连接空闲多久后开始发送 keepalive 探测（秒）
+    keep-alive-interval: 15          # 探测包发送间隔（秒） ← 你要设置的参数
+    reuse-addr: true                 # 连接复用，是否允许重用本地地址（Windows 上通常强制开启）
+    gc-interval: 30                  # 内存回收间隔（秒） ← 你要设置的参数
+    disable-keep-alive: false        # 是否禁用 TCP keepalive（Android 上通常强制开启）
+    external-doh-server: /dns-query  # 在external-controller启用DOH服务器 提供dns服务
+    external-controller: 0.0.0.0:9090
+    external-controller-tls: 0.0.0.0:9443
+    external-controller-pipe: \\.\pipe\mihomo # Windows namedpipe API 监听地址 从Windows namedpipe访问api接口不会验证secret， 如果开启请自行保证安全问题
+    external-controller-unix: mihomo.sock     # Unix socket API 监听地址 从Unix socket访问api接口不会验证secret， 如果开启请自行保证安全问题
+    external-controller-cors:        # API CORS 标头配置
+      allow-origins:
+        - "*"
+      allow-private-network: true
+    external-ui: "./ui/zashboard"    # 外部用户界面
+    external-ui-url: "https://github.com/Zephyruso/zashboard/releases/latest/download/dist.zip"
+    geodata-loader: standard         # standard 标准加载器 | memconservative 专为内存受限 (小内存) 设备优化的加载器 (默认值)
+    geo-auto-update: true
+    geo-update-interval: 168 # 7天更新一次
+    geodata-mode: true
+    geox-url:
+      geoip: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip-lite.dat"
+      geosite: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geosite.dat"
+      mmdb: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/country-lite.mmdb"
+      asn: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/GeoLite2-ASN.mmdb"
+    tracing: false # 性能分析引擎
+
+  sub-http: &sub-http # 机场订阅通用锚点
+    useProviders: &useProviders [飞伐伐, 雷神, 小牛加速, 火箭云, 香草云, 爱大米, 红杏出墙, 小云朵, 便宜机场, 宝可梦星云, 水牛云, GGB, 轻语机场, 酷可云, 自由狗狗, 蛙爪云, 劳大云, OneLight, 翻了么, knotic, NEX, Acceleration, IKuuuVPN, 马铃薯, 聚合订阅]
+    # 订阅基础配置
+    subBase: &subBase {type: http, interval: 86400, health-check: {enable: true, interval: 600, url: https://cp.cloudflare.com/generate_204}}
+    # 直连拉取订阅
+    subHttpDirect: &subHttpDirect {<<: *subBase, proxy: DIRECT}
+    # 代理拉取订阅
+    subHttpProxy: &subHttpProxy {<<: *subBase, proxy: CF优选}
+
+  group-anchor: &group-anchor # 策略组锚点
+    # domestic 国内流量默认选择
+    domestic: &domestic {type: select, proxies: [DIRECT, CF优选, 北美洲大陆, 南美洲大陆, 欧洲大陆, 亚洲大陆, 大洋洲大陆, 非洲大陆, 所有-智选, 所有-手选, REJECT-DROP], interval: 300, tolerance: 25, include-self: false}
+    # abroad 默认国外地区选择
+    abroad: &abroad {proxies: [北美洲大陆, 亚洲大陆, 欧洲大陆, 南美洲大陆, 大洋洲大陆, 非洲大陆, 所有-手选, REJECT-DROP], interval: 300, tolerance: 25, include-self: false}
+    # 阻断-广告净化等
+    Interrupt: &Interrupt {type: select, hidden: true, proxies: [REJECT-DROP, REJECT, DIRECT, 所有-智选, 所有-手选]} # REJECT-DROP 为丢包模式
+    # 各地区智能选择组模板
+    regionSmart: &regionSmart {type: smart, include-all-proxies: true, uselightgbm: true, collectdata: true, interval: 300, tolerance: 25, use: *useProviders, include-self: false, proxies: [PASS]}
+    regionTemplate: &regionTemplate {<<: *regionSmart, include-self: false, hidden: true, icon: null} # 保留公共参数
+
+    continent: # 大洲大陆分流组模板
+      icon-Country: # 国家地区图标
+        Asia:
+          icon-HK: &icon-HK https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/hk.svg
+          icon-MO: &icon-MO https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/mo.svg
+          icon-JP: &icon-JP https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/jp.svg
+          icon-TW: &icon-TW https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/tw.svg
+          icon-SG: &icon-SG https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/sg.svg
+          icon-VN: &icon-VN https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/vn.svg
+          icon-KR: &icon-KR https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/kr.svg
+          icon-IN: &icon-IN https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/in.svg
+          icon-MY: &icon-MY https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/my.svg
+          icon-KH: &icon-KH https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/kh.svg
+          icon-TH: &icon-TH https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/th.svg
+          icon-PH: &icon-PH https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/ph.svg
+          icon-ID: &icon-ID https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/id.svg
+          icon-AE: &icon-AE https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/ae.svg
+          icon-BD: &icon-BD https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/bd.svg
+          icon-KZ: &icon-KZ https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/kz.svg
+          icon-AZ: &icon-AZ https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/az.svg
+          icon-IL: &icon-IL https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/il.svg
+          icon-SA: &icon-SA https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/sa.svg
+        Europe:
+          icon-RU: &icon-RU https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/ru.svg
+          icon-DE: &icon-DE https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/de.svg
+          icon-GB: &icon-GB https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/gb.svg
+          icon-FR: &icon-FR https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/fr.svg
+          icon-NL: &icon-NL https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/nl.svg
+          icon-TR: &icon-TR https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/tr.svg
+          icon-ES: &icon-ES https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/es.svg
+          icon-HU: &icon-HU https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/hu.svg
+          icon-MK: &icon-MK https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/mk.svg
+          icon-MD: &icon-MD https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/md.svg
+          icon-PL: &icon-PL https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/pl.svg
+          icon-IS: &icon-IS https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/is.svg
+          icon-NO: &icon-NO https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/no.svg
+          icon-DK: &icon-DK https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/dk.svg
+          icon-AT: &icon-AT https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/at.svg
+          icon-BE: &icon-BE https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/be.svg
+          icon-PT: &icon-PT https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/pt.svg
+          icon-IT: &icon-IT https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/it.svg
+          icon-RO: &icon-RO https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/ro.svg
+          icon-UA: &icon-UA https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/ua.svg
+          icon-LV: &icon-LV https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/lv.svg
+          icon-LU: &icon-LU https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/lu.svg
+          icon-LI: &icon-LI https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/li.svg
+          icon-MC: &icon-MC https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/mc.svg
+          icon-BG: &icon-BG https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/bg.svg
+          icon-CH: &icon-CH https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/ch.svg
+        Africa:
+          icon-ZA: &icon-ZA https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/za.svg
+          icon-MA: &icon-MA https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/ma.svg
+          icon-KE: &icon-KE https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/ke.svg
+          icon-EG: &icon-EG https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/eg.svg
+          icon-NG: &icon-NG https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/ng.svg
+          icon-GH: &icon-GH https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/gh.svg
+          icon-DZ: &icon-DZ https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/dz.svg
+          icon-TN: &icon-TN https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/tn.svg
+          icon-UG: &icon-UG https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/ug.svg
+          icon-TZ: &icon-TZ https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/tz.svg
+          icon-ET: &icon-ET https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/et.svg
+          icon-AO: &icon-AO https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/ao.svg
+          icon-ZM: &icon-ZM https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/zm.svg
+          icon-ZW: &icon-ZW https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/zw.svg
+          icon-LY: &icon-LY https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/ly.svg
+          icon-SS: &icon-SS https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/ss.svg
+          icon-SO: &icon-SO https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/so.svg
+          icon-MG: &icon-MG https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/mg.svg
+          icon-MU: &icon-MU https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/mu.svg
+        NorthAmerica:
+          icon-US: &icon-US https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/us.svg
+          icon-CA: &icon-CA https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/ca.svg
+          icon-MX: &icon-MX https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/mx.svg
+          icon-CU: &icon-CU https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/cu.svg
+          icon-DO: &icon-DO https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/do.svg
+          icon-HT: &icon-HT https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/ht.svg
+          icon-JM: &icon-JM https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/jm.svg
+          icon-BS: &icon-BS https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/bs.svg
+          icon-BB: &icon-BB https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/bb.svg
+          icon-BZ: &icon-BZ https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/bz.svg
+          icon-PA: &icon-PA https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/pa.svg
+          icon-GT: &icon-GT https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/gt.svg
+          icon-HN: &icon-HN https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/hn.svg
+          icon-NI: &icon-NI https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/ni.svg
+        SouthAmerica:
+          icon-BR: &icon-BR https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/br.svg
+          icon-AR: &icon-AR https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/ar.svg
+          icon-CL: &icon-CL https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/cl.svg
+          icon-CO: &icon-CO https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/co.svg
+          icon-PE: &icon-PE https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/pe.svg
+          icon-UY: &icon-UY https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/uy.svg
+          icon-BO: &icon-BO https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/bo.svg
+          icon-PY: &icon-PY https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/py.svg
+          icon-GY: &icon-GY https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/gy.svg
+          icon-SR: &icon-SR https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/sr.svg
+          icon-VE: &icon-VE https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/ve.svg
+          icon-EC: &icon-EC https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/ec.svg
+        Oceania:
+          icon-AU: &icon-AU https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/au.svg
+          icon-NZ: &icon-NZ https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/nz.svg
+          icon-PG: &icon-PG https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/pg.svg
+          icon-FJ: &icon-FJ https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/fj.svg
+          icon-SB: &icon-SB https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/sb.svg
+          icon-VU: &icon-VU https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/vu.svg
+          icon-WS: &icon-WS https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/ws.svg
+          icon-TO: &icon-TO https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/to.svg
+          icon-KI: &icon-KI https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/ki.svg
+          icon-FM: &icon-FM https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/fm.svg
+          icon-MH: &icon-MH https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/mh.svg
+          icon-NR: &icon-NR https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/nr.svg
+          icon-PW: &icon-PW https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/pw.svg
+          icon-TV: &icon-TV https://raw.githubusercontent.com/lipis/flag-icons/refs/heads/main/flags/4x3/tv.svg
+      providers-filter: # 地区过滤器
+        Asia-filter: # 亚洲
+          filter-HK: &filter-HK (?=.*(广港|香港|HK|Hong Kong|🇭🇰|HongKong|hk)).*$
+          filter-MO: &filter-MO (?=.*(广澳|澳门|Macau|🇲🇴|Macao)).*$
+          filter-JP: &filter-JP (?=.*(广日|日本|JP|jp|川日|东京|大阪|泉日|埼玉|古屋|横滨|神户|京都|北海道|沪日|深日|🇯🇵|Japan)).*$
+          filter-TW: &filter-TW (?=.*(台湾|TW|tw|台北|高雄|🇹🇼|Taiwan|Tai Wan|Taipei)).*$
+          filter-SG: &filter-SG (?=.*(广新|新加坡|SG|sg|狮城|🇸🇬|Singapore)).*$
+          filter-VN: &filter-VN (?=.*(越南|VN|vn|胡志明|河内|🇻🇳|Vietnam)).*$
+          filter-KR: &filter-KR (?=.*(广韩|韩国|韓國|KR|首尔|春川|🇰🇷|Korea)).*$
+          filter-IN: &filter-IN (?=.*(印度|孟买|新德里|India|Mumbai|Delhi|IN|🇮🇳)).*$
+          filter-MY: &filter-MY (?=.*(马来西亚|吉隆坡|Malaysia|Kuala Lumpur|MY|🇲🇾)).*$
+          filter-KH: &filter-KH (?=.*(柬埔寨|金边|Cambodia|Phnom Penh|KH|🇰🇭)).*$
+          filter-TH: &filter-TH (?=.*(泰国|曼谷|Thailand|Bangkok|TH|🇹🇭)).*$
+          filter-PH: &filter-PH (?=.*(菲律宾|马尼拉|Philippines|Manila|PH|🇵🇭)).*$
+          filter-ID: &filter-ID (?=.*(印度尼西亚|印尼|雅加达|Indonesia|Jakarta|ID|🇮🇩)).*$
+          filter-AE: &filter-AE (?=.*(阿联酋|迪拜|阿布扎比|UAE|Dubai|AE|🇦🇪)).*$
+          filter-BD: &filter-BD (?=.*(孟加拉|达卡|Bangladesh|Dhaka|BD|🇧🇩)).*$
+          filter-KZ: &filter-KZ (?=.*(哈萨克斯坦|阿斯塔纳|努尔苏丹|Kazakhstan|Astana|KZ|🇰🇿)).*$
+          filter-AZ: &filter-AZ (?=.*(阿塞拜疆|巴库|Azerbaijan|Baku|AZ|🇦🇿)).*$
+          filter-IL: &filter-IL (?=.*(以色列|特拉维夫|Israel|Tel Aviv|🇮🇱)).*$
+          filter-SA: &filter-SA (?=.*(沙特阿拉伯|利雅得|Riyadh|Saudi Arabia|🇸🇦)).*$
+        Europe-filter: # 欧洲
+          filter-RU: &filter-RU (?=.*(俄罗斯|RU|ru|莫斯科|圣彼得堡|🇷🇺|Russia)).*$
+          filter-DE: &filter-DE (?=.*(德国|柏林|慕尼黑|法兰克福|汉堡|🇩🇪|Germany|Berlin|Munich|Frankfurt)).*$
+          filter-GB: &filter-GB (?=.*(英国|伦敦|UK|United Kingdom|GBR|Britain|London|🇬🇧)).*$
+          filter-FR: &filter-FR (?=.*(法国|巴黎|France|French|Paris|🇫🇷)).*$
+          filter-NL: &filter-NL (?=.*(荷兰|Amsterdam|Netherlands|NL|🇳🇱)).*$
+          filter-TR: &filter-TR (?=.*(土耳其|伊斯坦布尔|Turkey|Istanbul|TR|🇹🇷)).*$
+          filter-ES: &filter-ES (?=.*(西班牙|马德里|Barcelona|Spain|Madrid|🇪🇸)).*$
+          filter-HU: &filter-HU (?=.*(匈牙利|布达佩斯|Hungary|Budapest|HU|🇭🇺)).*$
+          filter-MK: &filter-MK (?=.*(北马其顿|斯科普里|North Macedonia|Skopje|MK|🇲🇰)).*$
+          filter-MD: &filter-MD (?=.*(摩尔多瓦|基希讷乌|Moldova|Chisinau|MD|🇲🇩)).*$
+          filter-PL: &filter-PL (?=.*(波兰|华沙|Poland|Warsaw|🇵🇱)).*$
+          filter-IS: &filter-IS (?=.*(冰岛|雷克雅未克|Iceland|Reykjavik|IS|🇮🇸)).*$
+          filter-NO: &filter-NO (?=.*(挪威|奥斯陆|Norway|Oslo|NO|🇳🇴)).*$
+          filter-DK: &filter-DK (?=.*(丹麦|哥本哈根|Denmark|Copenhagen|🇩🇰)).*$
+          filter-IT: &filter-IT (?=.*(意大利|罗马|米兰|Italy|Rome|Milan|🇮🇹)).*$
+          filter-AT: &filter-AT (?=.*(奥地利|维也纳|Austria|Vienna|AT|🇦🇹)).*$
+          filter-BE: &filter-BE (?=.*(比利时|布鲁塞尔|Belgium|Brussels|BE|🇧🇪)).*$
+          filter-PT: &filter-PT (?=.*(葡萄牙|里斯本|Portugal|Lisbon|🇵🇹)).*$
+          filter-RO: &filter-RO (?=.*(罗马尼亚|布加勒斯特|Romania|Bucharest|RO|🇷🇴)).*$
+          filter-UA: &filter-UA (?=.*(乌克兰|基辅|Kyiv|Ukraine|UA|🇺🇦)).*$
+          filter-LV: &filter-LV (?=.*(拉脱维亚|里加|Latvia|Riga|LV|🇱🇻)).*$
+          filter-LU: &filter-LU (?=.*(卢森堡|Luxembourg|LU|🇱🇺)).*$
+          filter-LI: &filter-LI (?=.*(列支敦士登|Liechtenstein|🇱🇮)).*$
+          filter-MC: &filter-MC (?=.*(摩纳哥|Monaco|MC|🇲🇨)).*$
+          filter-BG: &filter-BG (?=.*(保加利亚|Bulgaria|🇧🇬)).*$
+          filter-CH: &filter-CH (?=.*(瑞士|苏黎世|Switzerland|Zurich|🇨🇭)).*$
+        Africa-filter: # 非洲
+          filter-ZA: &filter-ZA (?=.*(南非|约翰内斯堡|开普敦|德班|Cape Town|CapeTown|South Africa|Johannesburg|ZA|🇿🇦)).*$
+          filter-MA: &filter-MA (?=.*(摩洛哥|卡萨布兰卡|Morocco|Casablanca|MA|🇲🇦)).*$
+          filter-KE: &filter-KE (?=.*(肯尼亚|内罗毕|Kenya|Nairobi|KE|🇰🇪)).*$
+          filter-EG: &filter-EG (?=.*(埃及|开罗|Egypt|Cairo|EG|🇪🇬)).*$
+          filter-NG: &filter-NG (?=.*(尼日利亚|拉各斯|Nigeria|Lagos|NG|🇳🇬)).*$
+          filter-GH: &filter-GH (?=.*(加纳|阿克拉|Ghana|Accra|GH|🇬🇭)).*$
+          filter-DZ: &filter-DZ (?=.*(阿尔及利亚|阿尔及尔|Algeria|Algiers|DZ|🇩🇿)).*$
+          filter-TN: &filter-TN (?=.*(突尼斯|突尼斯市|Tunisia|Tunis|TN|🇹🇳)).*$
+          filter-UG: &filter-UG (?=.*(乌干达|坎帕拉|Uganda|Kampala|UG|🇺🇬)).*$
+          filter-TZ: &filter-TZ (?=.*(坦桑尼亚|达累斯萨拉姆|TZ|🇹🇿)).*$
+          filter-ET: &filter-ET (?=.*(埃塞俄比亚|亚的斯亚贝巴|Ethiopia|🇪🇹)).*$
+          filter-AO: &filter-AO (?=.*(安哥拉|罗安达|Angola|Luanda|AO|🇦🇴)).*$
+          filter-ZM: &filter-ZM (?=.*(赞比亚|卢萨卡|Zambia|Lusaka|ZM|🇿🇲)).*$
+          filter-ZW: &filter-ZW (?=.*(津巴布韦|哈拉雷|Zimbabwe|Harare|ZW|🇿🇼)).*$
+          filter-LY: &filter-LY (?=.*(利比亚|的黎波里|Libya|Tripoli|LY|🇱🇾)).*$
+          filter-SS: &filter-SS (?=.*(南苏丹|朱巴|South Sudan|Juba|SS|🇸🇸)).*$
+          filter-SO: &filter-SO (?=.*(索马里|摩加迪沙|Somalia|Mogadishu|SO|🇸🇴)).*$
+          filter-MG: &filter-MG (?=.*(马达加斯加|安塔那那利佛|Madagascar|Antananarivo|MG|🇲🇬)).*$
+          filter-MU: &filter-MU (?=.*(毛里求斯|毛里求斯路易港|Mauritius|Port Louis|MU|🇲🇺)).*$
+        NorthAmerica-filter: # 北美洲
+          filter-US: &filter-US (?=.*(美国|纽约|洛杉矶|旧金山|西雅图|芝加哥|华盛顿|Miami|New York|Los Angeles|San Francisco|Seattle|Chicago|Washington|USA|US|🇺🇸)).*$
+          filter-CA: &filter-CA (?=.*(加拿大|多伦多|温哥华|蒙特利尔|Beauharnois|Calgary|Montreal|Ottawa|Toronto|Vancouver|CA|🇨🇦)).*$
+          filter-MX: &filter-MX (?=.*(墨西哥|墨西哥城|Mexico|Mexico City|MX|🇲🇽)).*$
+          filter-CU: &filter-CU (?=.*(古巴|哈瓦那|Cuba|Havana|CU|🇨🇺)).*$
+          filter-DO: &filter-DO (?=.*(多米尼加|圣多明各|Dominican Republic|Santo Domingo|DO|🇩🇴)).*$
+          filter-HT: &filter-HT (?=.*(海地|太子港|Haiti|HA|🇭🇹)).*$
+          filter-JM: &filter-JM (?=.*(牙买加|金斯敦|Jamaica|Kingston|JM|🇯🇲)).*$
+          filter-BS: &filter-BS (?=.*(巴哈马|拿骚|Bahamas|Nassau|BS|🇧🇸)).*$
+          filter-BB: &filter-BB (?=.*(巴巴多斯|Bridgetown|Barbados|Bridgetown|BB|🇧🇧)).*$
+          filter-BZ: &filter-BZ (?=.*(伯利兹|Belize|Belmopan|BZ|🇧🇿)).*$
+          filter-PA: &filter-PA (?=.*(巴拿马|巴拿马城|Panama|Panama City|PA|🇵🇦)).*$
+          filter-GT: &filter-GT (?=.*(危地马拉|瓜地马拉|Guatemala|Guatemala City|GT|🇬🇹)).*$
+          filter-HN: &filter-HN (?=.*(洪都拉斯|特古西加尔巴|Honduras|Tegucigalpa|HN|🇭🇳)).*$
+          filter-NI: &filter-NI (?=.*(尼加拉瓜|马那瓜|Nicaragua|Managua|NI|🇳🇮)).*$
+        SouthAmerica-filter: # 南美洲
+          filter-BR: &filter-BR (?=.*(巴西|巴西利亚|圣保罗|里约|Brazil|Brasilia|São Paulo|Rio|🇧🇷)).*$
+          filter-AR: &filter-AR (?=.*(阿根廷|布宜诺斯艾利斯|Argentina|Buenos Aires|🇦🇷)).*$
+          filter-CL: &filter-CL (?=.*(智利|圣地亚哥|Chile|Santiago|CL|🇨🇱)).*$
+          filter-CO: &filter-CO (?=.*(哥伦比亚|Bogotá|波哥大|Colombia|Bogota|Medellín|麦德林|Cartagena|卡塔赫纳|Barranquilla|巴兰基亚|Bucaramanga|布卡拉曼加|Cúcuta|库库塔|🇨🇴)).*$
+          filter-PE: &filter-PE (?=.*(秘鲁|利马|Peru|Lima|PE|🇵🇪)).*$
+          filter-UY: &filter-UY (?=.*(乌拉圭|蒙得维的亚|Uruguay|Montevideo|UY|🇺🇾)).*$
+          filter-BO: &filter-BO (?=.*(玻利维亚|拉巴斯|Bolivia|La Paz|BO|🇧🇴)).*$
+          filter-PY: &filter-PY (?=.*(巴拉圭|亚松森|Paraguay|Asuncion|PY|🇵🇾)).*$
+          filter-GY: &filter-GY (?=.*(圭亚那|乔治敦|Guyana|Georgetown|GY|🇬🇾)).*$
+          filter-SR: &filter-SR (?=.*(苏里南|巴拉马里博|Suriname|Paramaribo|SR|🇸🇷)).*$
+          filter-VE: &filter-VE (?=.*(委内瑞拉|加拉加斯|Venezuela|Caracas|VE|🇻🇪)).*$
+          filter-EC: &filter-EC (?=.*(厄瓜多尔|基多|Ecuador|Quito|EC|🇪🇨)).*$
+        Oceania-filter: # 大洋洲
+          filter-AU: &filter-AU (?=.*(澳大利亚|澳洲|维多利亚|悉尼|墨尔本|堪培拉|Australia|Sydney|Melbourne|Canberra|AU|🇦🇺)).*$
+          filter-NZ: &filter-NZ (?=.*(新西兰|奥克兰|惠灵顿|New Zealand|Auckland|Wellington|NZ|🇳🇿)).*$
+          filter-PG: &filter-PG (?=.*(巴布亚新几内亚|巴布亚|新几内亚|Papua New Guinea|Papua|New Guinea|PG|🇵🇬)).*$
+          filter-FJ: &filter-FJ (?=.*(斐济|苏瓦|Fiji|Suva|FJ|🇫🇯)).*$
+          filter-SB: &filter-SB (?=.*(所罗门群岛|所罗门|Solomon Islands|Solomon|SB|🇸🇧)).*$
+          filter-VU: &filter-VU (?=.*(瓦努阿图|Vanuatu|Port Vila|VU|🇻🇺)).*$
+          filter-WS: &filter-WS (?=.*(萨摩亚|Apia|Samoa|🇼🇸)).*$
+          filter-TO: &filter-TO (?=.*(汤加|努库阿洛法|Tonga|Nuku'alofa|TO|🇹🇴)).*$
+          filter-KI: &filter-KI (?=.*(基里巴斯|塔拉瓦|Kiribati|Tarawa|🇰🇮)).*$
+          filter-FM: &filter-FM (?=.*(密克罗尼西亚|帕利基尔|Micronesia|Palikir|FM|🇫🇲)).*$
+          filter-MH: &filter-MH (?=.*(马绍尔|马侏罗|Majuro|Marshall Islands|Marshall|MH|🇲🇭)).*$
+          filter-NR: &filter-NR (?=.*(瑙鲁|亚伦|Yaren|Nauru|NR|🇳🇷)).*$
+          filter-PW: &filter-PW (?=.*(帕劳|恩吉鲁穆德|Palau|Ngerulmud|PW|🇵🇼)).*$
+          filter-TV: &filter-TV (?=.*(图瓦卢|富纳富提|Tuvalu|Funafuti|TV|🇹🇻)).*$
+        Exclude-filter: &Exclude-filter (?=.*(🇨🇳|回国|国内|中国|CN|cn|北京|上海|广州|深圳|杭州|成都|武汉|西安|重庆|南京|天津|苏州|沈阳|青岛|大连)).*$
+      continent-Country: # 大洲-国家地区
+        CONT: &CONT {type: url-test}
+        proxies-Asia: &proxies-Asia {<<: *CONT, icon: "https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Asia.svg", proxies: [日本地区, 香港地区, 新加坡地区, 澳门地区, 台湾地区, 韩国地区, 越南地区, 印度地区, 马来西亚地区, 柬埔寨地区, 泰国地区, 菲律宾地区, 印度尼西亚地区, 阿联酋地区, 孟加拉地区, 哈萨克斯坦地区, 阿塞拜疆地区, 以色列地区, 沙特阿拉伯地区]}
+        proxies-Europe: &proxies-Europe {<<: *CONT, icon: "https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Europe.svg", proxies: [荷兰地区, 德国地区, 英国地区, 法国地区, 土耳其地区, 俄罗斯地区, 西班牙地区, 匈牙利地区, 北马其顿地区, 摩尔多瓦地区, 波兰地区, 冰岛地区, 挪威地区, 丹麦地区, 奥地利地区, 比利时地区, 葡萄牙地区, 罗马尼亚地区, 乌克兰地区, 拉脱维亚地区, 卢森堡地区, 列支敦士登地区, 摩纳哥地区, 保加利亚地区, 瑞士地区]}
+        proxies-Africa: &proxies-Africa {<<: *CONT, icon: "https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Africa.svg", proxies: [埃及地区, 南非地区, 摩洛哥地区, 肯尼亚地区, 尼日利亚地区, 加纳地区, 阿尔及利亚地区, 突尼斯地区, 乌干达地区, 坦桑尼亚地区, 埃塞俄比亚地区, 安哥拉地区, 赞比亚地区, 津巴布韦地区, 利比亚地区, 索马里地区, 马达加斯加地区, 毛里求斯地区]}
+        proxies-NorthAmerica: &proxies-NorthAmerica {<<: *CONT, icon: "https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/North_America.svg", proxies: [美国地区, 加拿大地区, 墨西哥地区, 古巴地区, 多米尼加共和国地区, 海地地区, 牙买加地区, 巴哈马地区, 巴巴多斯地区, 伯利兹地区, 巴拿马地区, 危地马拉地区, 洪都拉斯地区, 尼加拉瓜地区]}
+        proxies-SouthAmerica: &proxies-SouthAmerica {<<: *CONT, icon: "https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/South_America.svg", proxies: [巴西地区, 阿根廷地区, 智利地区, 哥伦比亚地区, 秘鲁地区, 乌拉圭地区, 委内瑞拉地区, 厄瓜多尔地区, 玻利维亚地区, 巴拉圭地区, 圭亚那地区, 苏里南地区]}
+        proxies-Oceania: &proxies-Oceania {<<: *CONT, icon: "https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Oceania.svg", proxies: [澳大利亚地区, 新西兰地区, 巴布亚新几内亚地区, 斐济地区, 所罗门群岛地区, 瓦努阿图地区, 萨摩亚地区, 汤加地区, 基里巴斯地区, 密克罗尼西亚地区, 马绍尔群岛地区, 瑙鲁地区, 帕劳地区, 图瓦卢地区]}
+
+  rule-anchor: &rule-anchor # 规则锚点
+    # 公用字段
+    public_field: &public_field {type: http, interval: 604800}
+
+    ip_mrs: &ip_mrs {<<: *public_field, behavior: ipcidr, format: mrs}
+    domain_mrs: &domain_mrs {<<: *public_field, behavior: domain, format: mrs}
+    class_text: &class_text {<<: *public_field, behavior: classical, format: text}
+    class_yaml: &class_yaml {<<: *public_field, behavior: classical, format: yaml}
+
+proxy-providers: # 机场节点订阅
+
+  飞伐伐: # https://fffa.cc/#/dashboard
+    <<: *subHttpProxy
+    url: "https://asd.fifafa.vip/s/0281a30599ee1d7d25a8bf3256de0deb"
+    path: "./proxy_provider/飞伐伐.yaml"
+
+  雷神: # https://xn--cjz291d.co/#/dashboard
+    <<: *subHttpProxy
+    url: "https://uuidleishen.xn--cjz291d.co/leishen/b7f2a5fae930bb6f07afb3caec2f7e78"
+    path: "./proxy_provider/雷神.yaml"
+
+  小牛加速: # https://home.xiaoniu8123.com/#/dashboard
+    <<: *subHttpProxy
+    url: "http://103.36.135.125:8123/api/v1/client/subscribe?token=602fd84d4830899906c4df0501e5668d"
+    path: "./proxy_provider/小牛加速.yaml"
+
+  火箭云: # https://buy.veri-tickets.top/#/dashboard
+    <<: *subHttpProxy
+    url: "https://dy.veri-tickets.top/rocket/6e88fe8bf5be03a5e5295434cdf64fbd"
+    path: "./proxy_provider/火箭云.yaml"
+
+  香草云: # https://user.vanilla.rest/#/dashboard
+    <<: *subHttpProxy
+    url: "https://sub.vanilla.rest/xiangcao/c42803a3ba1d4871a97e40ef0d65b075"
+    path: "./proxy_provider/香草云.yaml"
+
+  爱大米: # https://bbec.cc/#/dashboard
+    <<: *subHttpProxy
+    url: "https://dingyue.bbec.cc/dingyue/51400a31476d869f5d3a196874e989e0"
+    path: "./proxy_provider/爱大米.yaml"
+
+  红杏出墙: # www.hongx.sbs | t.me/hongx688
+    <<: *subHttpProxy
+    url: "https://proxy.hongx.sbs/ip/777d499b89f292f2c66dd5055ed5659c"
+    path: "./proxy_provider/红杏出墙.yaml"
+
+  小云朵: # https://www.yunduovpn.xyz/
+    <<: *subHttpProxy
+    url: "https://www.yunduovpn.xyz/s/b028750190961e228da96abab5621a4c"
+    path: "./proxy_provider/小云朵.yaml"
+
+  便宜机场: # https://t.me/cheapairport_channel | 每月都有？
+    <<: *subHttpProxy
+    url: "https://103.14.76.98/sub/fsc/4421a2976013da5bd21514e5b0f3df84"
+    path: "./proxy_provider/便宜机场.yaml"
+
+  宝可梦星云: # https://t.me/pokemon521
+    <<: *subHttpProxy
+    url: "https://jkun.waimaosass.icu/api/v1/client/subscribe?token=837de80b15198324fffe095f59328c8b"
+    path: "./proxy_provider/宝可梦星云.yaml"
+
+  水牛云: # https://web.nnpy.org/#/dashboard | https://t.me/niua_org
+    <<: *subHttpProxy
+    url: "https://wap.nnpy.org/niu/niu?token=bce37a0e5802acc10aad91bed0f5a2a6"
+    path: "./proxy_provider/水牛云.yaml"
+
+  GGB: # www.ggb.su
+    <<: *subHttpProxy
+    url: "https://d.dydy.de5.net/bingxing/fb0de745384cefb8603b6a3bb8383b33"
+    path: "./proxy_provider/GGB.yaml"
+
+  轻语机场: # https://www.lajiaoyun.xyz/#/dashboard | Tg群 https://t.me/+B3MTobjC1XkxZmJl
+    <<: *subHttpProxy
+    url: "https://free.qingyuyun.top/user/profile/data/af7ab51c059dca976149f895f00ab516"
+    path: "./proxy_provider/轻语机场.yaml"
+
+  酷可云: # https://kukeyun.cc/ | t.me/kukeyun
+    <<: *subHttpProxy
+    url: "https://auth.api.22na.cn/s/4b5d9fc2f846c7f247cddc18ec3d4de5"
+    path: "./proxy_provider/酷可云.yaml"
+
+  自由狗狗: # https://www.freedogdog.com/
+    <<: *subHttpProxy
+    url: "https://www.freedogdog.com/api/subscribe?token=057ef67049a34800b52b037f3eb6e258&flag=4"
+    path: "./proxy_provider/自由狗狗.yaml"
+
+  蛙爪云: # https://t.me/webwapcyou | 免费机场
+    <<: *subHttpProxy
+    url: "https://b.wazhua.org/web?token=5245100dcec164e670ca44069ade151a"
+    path: "./proxy_provider/蛙爪云.yaml"
+
+  劳大云: # https://laodayun.com/
+    <<: *subHttpProxy
+    url: "https://api.laodayun.com/s/b54695287dfdeb94cc29dd7a4083c9b0"
+    path: "./proxy_provider/劳大云.yaml"
+
+  OneLight: # https://onelighter.site/#/dashboard
+    <<: *subHttpProxy
+    url: "https://downloads.onelighter.site/api/v1/client/subscribe?token=a46425012e1ec3989176ce996ce490ee"
+    path: "./proxy_provider/OneLight.yaml"
+
+  翻了么: # https://fanleme.vip/
+    <<: *subHttpProxy
+    url: "https://11121.top/s/b8cd70ae05c1aab6f6a34b8600cc9f44"
+    path: "./proxy_provider/翻了么.yaml"
+
+  knotic: # https://knotic.net/
+    <<: *subHttpProxy
+    url: "https://knotic.net/sub/fa98828f2cdf2c80/clash"
+    path: "./proxy_provider/knotic.yaml"
+
+  NEX: # https://nexp.top/#/dashboard
+    <<: *subHttpProxy
+    url: "https://sub.nexp.top/api/v1/client/subscribe?token=47443c4082a30d1fdf26d6d5dcd280ef"
+    path: "./proxy_provider/NEX.yaml"
+
+  IKuuuVPN: # https://ikuuu.one/
+    <<: *subHttpDirect
+    url: "https://mra6s.no-mad-world.club/link/UG40m4fYx9HPnVf5?clash=3"
+    path: "./proxy_provider/IKuuuVPN.yaml"
+
+  马铃薯: # https://mlshu.com
+    <<: *subHttpDirect
+    url: "https://mlshu.top/s/c27c861ac6eef04bc5bab191abf3b417"
+    path: "./proxy_provider/马铃薯.yaml"
+
+  Acceleration: # https://user.easyinternet.one/#/dashboard
+    <<: *subHttpDirect
+    url: "https://subscr.952724.xyz/api/v1/client/subscribe?token=b822b0b363e1645b2009443976a37c9c"
+    path: "./proxy_provider/Acceleration.yaml"
+
+  EdgeTunnel: # https://edgetunnel.05200420.xyz/admin
+    <<: *subHttpDirect
+    url: "https://edgetunnel.05200420.xyz/sub?token=3a1bf5c4b79705395d276a348e05e320"
+    path: "./proxy_provider/EdgeTunnel.yaml"
+
+  日抛节点:
+    <<: *subHttpProxy
+    url: "https://raw.githubusercontent.com/ripaojiedian/freenode/main/clash"
+    path: "./proxy_provider/日抛节点.yaml"
+
+  shaoyouvip:
+    <<: *subHttpProxy
+    url: "https://raw.githubusercontent.com/shaoyouvip/free/refs/heads/main/all.yaml"
+    path: "./proxy_provider/shaoyouvip.yaml"
+
+  聚合订阅: # https://supersub.05200420.xyz/fa861c44-1b60-49e3-9890-076f86e226e4
+    <<: *subHttpDirect
+    url: "https://supersub.05200420.xyz/fa861c44-1b60-49e3-9890-076f86e226e4?b64"
+    path: "./proxy_provider/聚合订阅.yaml"
+
+proxies: # 节点列表
+  - name: "edgetunnel-vless"
+    type: vless
+    server: edgetunnel.05200420.xyz
+    port: 443
+    uuid: cafdc81a-af18-454a-855b-106209c55665
+    network: ws
+    tls: true
+    udp: true
+    servername: edgetunnel.05200420.xyz
+    client-fingerprint: chrome
+    ws-opts:
+      path: "/"
+      headers:
+        Host: edgetunnel.05200420.xyz
+
+dns: # DNS 设置
+  enable: true
+  cache-algorithm: arc # or lru
+  use-hosts: true
+  use-system-hosts: true
+  respect-rules: true # 不建议和prefer-h3同时开启，可能导致DNS解析异常
+  prefer-h3: false
+  listen: 0.0.0.0:7874
+  ipv6: true
+  hijack-dns: true
+  enhanced-mode: fake-ip
+  fake-ip-ttl: 1200
+  fake-ip-range: 198.18.0.1/16
+  fallback-timeout: 150
+  fake-ip-filter-mode: blacklist # blacklist/whitelist/rule
+  fake-ip-cache-size: 30000 # 增大缓存
+  direct-nameserver-follow-policy: true
+  independent-cache: true # 独立缓存
+  disable-cache: false # 保持开启缓存
+  disable-expire: false # 尊重 TTL
+  default-nameserver: # 必须用纯 IP，不能是域名或 URL
+    - tls://223.5.5.5#ecs=119.29.29.29/24&ecs-override=false
+    - tls://1.12.12.12#ecs=223.5.5.5/24&ecs-override=false
+  nameserver:
+    - tls://1.1.1.1
+    - tls://8.8.8.8
+    - tls://9.9.9.9
+  direct-nameserver:
+    - https://223.5.5.5#ecs=119.29.29.29/24&ecs-override=false
+    - https://doh.pub/dns-query#ecs=223.5.5.5/24&ecs-override=false
+    - tls://223.5.5.5#ecs=119.29.29.29/24&ecs-override=false
+  proxy-server-nameserver:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+    - https://dns.cloudflare.com/dns-query
+  nameserver-policy:
+    # 国内域名强制走国内 DNS
+    'geosite:cn':
+      - https://223.5.5.5#ecs=119.29.29.29/24&ecs-override=false
+      - https://doh.pub/dns-query#ecs=223.5.5.5/24&ecs-override=false
+    '+.cn':
+      - https://223.5.5.5#ecs=119.29.29.29/24&ecs-override=false
+      - https://doh.pub/dns-query#ecs=223.5.5.5/24&ecs-override=false
+    # 重要服务特殊处理（推荐）
+    '+.baidu.com,+.bilibili.com,+.taobao.com,+.alipay.com':
+      - https://223.5.5.5#ecs=119.29.29.29/24&ecs-override=false
+    '+.qq.com,+.tencent.com':
+      - https://223.5.5.5#ecs=119.29.29.29/24&ecs-override=false
+    '+.mi.com,+.xiaomi.com':
+      - https://223.5.5.5#ecs=119.29.29.29/24&ecs-override=false
+
+    # 国外主流服务（改用域名匹配，更稳定）
+    '+.google.com,+.googleapis.com,+.gstatic.com,+.googlevideo.com':
+      - https://dns.google/dns-query
+    '+.github.com,+.githubassets.com,+.githubusercontent.com':
+      - https://dns.google/dns-query
+    '+.twitter.com,+.x.com,+.twimg.com':
+      - https://dns.google/dns-query
+  fallback:
+    - https://dns.google/dns-query
+    - https://cloudflare-dns.com/dns-query
+  fallback-filter:
+    geoip: true
+    geoip-code: CN
+    ipcidr:
+      - 240.0.0.0/4
+      - 0.0.0.0/32
+      - 127.0.0.1/8
+      - 10.0.0.0/8
+      - 172.16.0.0/12
+      - 192.168.0.0/16
+    domain:
+      - 'geosite:cn'
+      - '+.google.com'
+      - '+.facebook.com'
+      - '+.youtube.com'
+      - '+.twitter.com'
+      - '+.github.com'
+      - 'geosite:private'
+  fake-ip-filter:
+    # ==================== 1. 本地网络 & mDNS 服务发现（最重要） ====================
+    - geosite:private           # 强烈推荐新增！覆盖所有私有地址解析
+    - '*.lan'
+    - '*.local'
+    - '*.localdomain'
+    - '*.localhost'
+    - '*.home.arpa'
+    - '*.invalid'
+    - '*.example'
+    - '*.test'
+    - 'local'
+    - 'localhost'
+    - '0.0.0.0'
+    - '127.0.0.1'
+    - '::1'
+
+    # ==================== 2. BT / P2P / 种子 / Tracker（防止误判） ====================
+    - 'tracker.*'
+    - '*.tracker.*'
+    - 'announce.*'
+    - 'bt.*'
+    - 'torrent.*'
+    - 'peer.*'
+    - 'utorrent.*'
+    - 'bittorrent.*'
+    - 'dht.*'
+    - '*.dht.*'
+    - 'line1.*.com'      # 常见 tracker
+    - 'line2.*.com'
+
+    # ==================== 3. Apple 生态（AirDrop / AirPlay / iCloud 强化） ====================
+    - '+.apple.com'
+    - '+.icloud.com'
+    - '+.me.com'
+    - '+.push.apple.com'
+    - '+.apple-push.com'
+    - 'time*.apple.com'
+    - 'time-ios.apple.com'
+    - 'setup.icloud.com'
+    - '*.ls.apple.com'
+    - '*.aaplimg.com'
+    - 'mesu.apple.com'
+    - 'swscan.apple.com'
+    - 'swquery.apple.com'
+    - 'swdownload.apple.com'
+    - 'swcdn.apple.com'
+    - 'swdist.apple.com'
+    - 'device-enrollment.apple.com'
+    - 'identity.apple.com'
+    - 'gdmf.apple.com'
+    - 'gs.apple.com'
+    - 'humb.apple.com'
+    - 'captive.apple.com'
+
+    # ==================== 4. 连通性检测（防止“无互联网”提示） ====================
+    - '+.msftconnecttest.com'
+    - '+.msftncsi.com'
+    - 'www.msftncsi.com'
+    - 'connectivitycheck.gstatic.com'
+    - 'connectivitycheck.android.com'
+    - 'clients3.google.com'
+    - 'detectportal.firefox.com'
+    - 'network-test.debian.org'
+    - 'ping.archlinux.org'
+    - 'generate_204'
+    - 'www.gstatic.com'
+
+    # ==================== 5. 智能家居 / IoT 设备 ====================
+    - '+.mi.com'
+    - '+.xiaomi.com'
+    - '+.miot-spec.com'
+    - 'ot.io.mi.com'
+    - '+.yeelink.net'
+    - '+.tuya.com'
+    - '+.tuyaus.com'
+    - '+.tp-link.com'
+    - '+.meross.com'
+    - '+.miwifi.com'
+
+    # ==================== 6. 打印机 & 服务发现 ====================
+    - 'printer.local'
+    - 'ipp.local'
+    - '_ipp._tcp.local'
+    - '_printer._tcp.local'
+    - '_pdl-datastream._tcp.local'
+    - 'ws-discovery'
+
+    # ==================== 7. WebRTC / 音视频 / STUN / TURN（视频通话、游戏关键） ====================
+    - 'stun.*.*'
+    - 'stun.*.*.*'
+    - '+.stun.*'
+    - '+.turn.*'
+    - 'stun.l.google.com'
+    - 'turn.cloudflare.com'
+    - 'global.turn.twilio.com'
+    - 'global.stun.twilio.com'
+
+    # ==================== 8. 远程桌面 & 常用工具 ====================
+    - '+.rustdesk.com'
+    - '+.teamviewer.com'
+    - '+.sunlogin.net'
+    - '+.oray.com'
+
+    # ==================== 9. NTP 时间同步 ====================
+    - 'time.*.com'
+    - 'time.*.gov'
+    - 'time.*.edu.cn'
+    - 'ntp.*.com'
+    - 'ntp*.com'
+    - '+.pool.ntp.org'
+    - 'time1.cloud.tencent.com'
+    - '*.time.edu.cn'
+    - '*.ntp.org.cn'
+
+    # ==================== 10. 你原来的其他列表（已去重整理） ====================
+    - 'cable.auth.com'
+    - 'resolver1.opendns.com'
+    - 'app.yinxiang.com'
+    - 'injections.adguard.org'
+    - '*.blzstatic.cn'
+    - '*.cmpassport.com'
+    - 'id6.me'
+    - 'open.e.189.cn'
+    - 'graph.qq.com'
+    - 'localhost.*.qq.com'
+    - '*.wosms.cn'
+    - '*.jegotrip.com.cn'
+    - '*.icitymobile.mobi'
+    - '*.pingan.com.cn'
+    - '*.cmbchina.com'
+    - '*.10099.com.cn'
+    - '*.microdone.cn'
+    - 'PDC._msDCS.*.*'
+    - 'DC._msDCS.*.*'
+    - 'GC._msDCS.*.*'
+    - 'music.163.com'
+    - '*.music.163.com'
+    - 'musicapi.taihe.com'
+    - '*.kuwo.cn'
+    - 'y.qq.com'
+    - '*.y.qq.com'
+    - '*.xiami.com'
+    - 'music.migu.cn'
+    - '+.services.googleapis.cn'
+    - 'heartbeat.belkin.com'
+
+tun: # TUN 模块
+  enable: true
+  stack: mixed # system/gvisor/mixed | 如无使用问题，建议使用 mixed栈，默认 gvisor | 如果打开了防火墙，则无法使用 system 和 mixed 协议栈，需要放行
+  device: utun # 指定 tun 网卡名称，MacOS 设备只能使用 utun 开头的网卡名
+  auto-route: true # 自动设置全局路由，可以自动将全局流量路由进入 tun 网卡。
+  auto-redirect: true # 仅支持 Linux，自动配置 iptables/nftables 以重定向 TCP 连接，需要auto-route已启用
+  auto-detect-interface: true # 自动选择流量出口接口，多出口网卡同时连接的设备建议手动指定出口网卡
+  dns-hijack:
+    - udp://any:53
+    - tcp://any:53
+    - tcp://any:853   # DoT
+    - any:53          # 保留兼容
+  # route-exclude-address: # 启用 auto-route 时排除自定义网段
+    # - 192.168.0.0/16
+    # - 172.16.0.0/12
+    # - 10.0.0.0/8
+    # - 127.0.0.0/8
+  mtu: 9000 # 最大传输单元，会影响极限状态下的速率，一般用户默认即可。
+  gso: true # 启用通用分段卸载，仅支持 Linux
+  gso-max-size: 65536 # 数据块的最大长度
+  udp-timeout: 500 # UDP NAT 过期时间，以秒为单位，默认为 300(5 分钟)
+  iproute2-table-index: 2022 # auto-route 生成的 iproute2 路由表索引，默认使用 2022
+  iproute2-rule-index: 9000 # auto-route 生成的 iproute2 规则起始索引，默认使用 9000
+  endpoint-independent-nat: true # 启用端点独立 NAT，解决部分运营商 NAT 过于严格导致的 UDP 连接问题 | 性能可能会略有下降，所以不建议在不需要的时候开启。
+  strict-route: true # 启用 auto-route 时执行严格的路由规则  
+  include-package: # 包含的 Android 应用包名，使其被 Tun 路由流量，未配置的应用包不会被 Tun 路由流量
+    - com.android.chrome
+  exclude-package: # 排除 Android 应用包名，使其避免被 Tun 路由流量
+    - com.android.captiveportallogin
+
+hosts: # 自定义 hosts
+  time.windows.com: 182.254.116.116
+  time.facebook.com: 17.253.84.125
+  time.android.com: 17.253.84.125
+  ntp.aliyun.com: 203.107.6.88
+  ggbases.com: 104.21.3.205
+  www.ggbases.com: 104.21.3.205
+  ic.adobe.io: 127.0.0.1
+  cc-ppi-data.adobe.io: 127.0.0.1
+  cc-api-data-stage.adobe.io: 127.0.0.1
+  prod.adobegenuine.com: 127.0.0.1
+  adobestats.io: 127.0.0.1
+  cloud.adobe.io: 127.0.0.1
+  prod.cloud.adobe.io: 127.0.0.1
+  ntp.msn.com: 127.0.0.1
+  assets.msn.cn: 127.0.0.1
+  api.msn.com: 127.0.0.1
+  browser.events.data.msn.com: 127.0.0.1
+  img-s-msn-com.akamaized.net: 127.0.0.1
+
+sniffer: # 域名嗅探
+  enable: true # 是否启用sniffer
+  force-dns-mapping: true # 对 redir-host 类型识别的流量进行强制嗅探
+  parse-pure-ip: false # 对所有未获取到域名的流量进行强制嗅探
+  override-destination: true # 是否使用嗅探结果作为实际访问，默认为 true | HTTP 通常不需要覆盖目的地
+  sniff: # 一个数组，里面可以包含多个协议对象。
+    HTTP:
+      ports: [80, 8080-8880]
+      override-destination: false
+    TLS:
+      ports: [443, 8443]
+      override-destination: true
+    QUIC:
+      ports: [443, 8443]
+      override-destination: true
+  force-domain: # 需要强制嗅探的域名（默认情况下只对IP进行嗅探）
+    - +.v2ex.com
+  skip-domain: # 需要跳过嗅探的域名。主要解决部分站点sni字段非域名，导致嗅探结果异常的问题，如米家设备
+    - Mijia Cloud
+    - "+.apple.com"
+    - "+.itunes.apple.com"
+    - "+.mzstatic.com"
+    - "musicstatus.itunes.apple.com"
+    - "+.baidu.com"
+    - "+.bilibili.com"
+    - "+.mi.com"
+    - "+.xiaomi.com"
+
+profile: # 缓存
+  store-selected: true # 记住你手动选择的节点，下次重启后依然生效（强烈建议开启）
+  store-fake-ip: true # 记住 Fake-IP 映射缓存，加快启动速度和减少 DNS 查询
+  fake-ip-cache-size: 30000
+  smart-collector-size: 100.0
+
+tunnels: # 端口流量转发
+  - tcp/udp,0.0.0.0:51413,0.0.0.0:51413,DIRECT # BT常用端口
+  # - tcp/udp,127.0.0.1:6553,114.114.114.114:53,proxy
+  # - tcp,127.0.0.1:6666,rds.mysql.com:3306,vpn
+  # - network: [tcp, udp]
+  #   address: 127.0.0.1:7777
+  #   target: target.com
+  #   proxy: proxy
+
+proxy-groups: # 策略组定义
+ # 业务分流组
+  - {name: 人工智能, type: fallback, <<: *abroad, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/AI.svg}
+  - {name: Twitter(X), type: fallback, <<: *abroad, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Twitter.svg}
+  - {name: LINE, type: fallback, <<: *abroad, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/LINE.svg}
+  - {name: YouTube, type: fallback, <<: *abroad, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/YouTube.svg}
+  - {name: TikTok, type: fallback, <<: *abroad, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/TikTok.svg}
+  - {name: Spotify, type: fallback, <<: *abroad, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Spotify.svg}
+  - {name: Pixiv, type: fallback, <<: *abroad, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Pixiv.svg}
+  - {name: 情涩, type: fallback, <<: *abroad, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/tissue.svg}
+  - {name: Reddit, type: fallback, <<: *abroad, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Reddit.svg}
+  - {name: GitHub, type: url-test, <<: *abroad, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/GitHub.svg}
+  - {name: CloudFlare, type: url-test, <<: *abroad, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/CloudFlare.svg}
+  - {name: Telegram, type: url-test, <<: *abroad, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Telegram.svg}
+  - {name: Facebook, type: url-test, <<: *abroad, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Facebook.svg}
+  - {name: WhatsApp, type: url-test, <<: *abroad, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/WhatsApp.svg}
+  - {name: Threads, type: url-test, <<: *abroad, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Threads.svg}
+  - {name: Instagram, type: url-test, <<: *abroad, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Instagram.svg}
+  - {name: Disney, type: url-test, <<: *abroad, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Disney.svg}
+  - {name: Netflix, type: url-test, <<: *abroad, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Netflix.svg}
+  - {name: HBO, type: url-test, <<: *abroad, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/HBO.svg}
+  - {name: Twitch, type: url-test, <<: *abroad, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Twitch.svg}
+  - {name: Wikipedia, type: url-test, <<: *abroad, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Wikipedia.svg}
+  - {name: Amazon, type: url-test, <<: *abroad, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Amazon.svg}
+  - {name: Microsoft, type: url-test, <<: *abroad, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Microsoft.svg}
+  - {name: Google, type: url-test, <<: *abroad, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Google.svg}
+  - {name: Yandex, type: url-test, <<: *abroad, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Yandex.svg}
+  - {name: Duckduckgo, type: url-test, <<: *abroad, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Duckduckgo.svg}
+  - {name: Yahoo, type: url-test, <<: *abroad, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Yahoo.svg}
+  - {name: Steam, type: url-test, <<: *abroad, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Steam.svg}
+  - {name: Discord, type: url-test, <<: *abroad, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Discord.svg}
+  - {name: Game, type: url-test, <<: *abroad, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Game.svg}
+  # - {name: 金融交易, type: url-test, <<: *abroad, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/cryptocurrency.svg}
+  - {name: 国外测试, type: url-test, <<: *abroad, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Speedtest.svg}
+  - {name: 国内测试, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Speedtest.svg}
+  - {name: DeepSeek, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/DeepSeek.svg}
+  - {name: 阿里云, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Aliyun.svg}
+  - {name: 华为云, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Huaweiyun.svg}
+  - {name: 钉钉, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/DingTalk.svg}
+  - {name: 飞书, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Feishu.svg}
+  - {name: 阿里巴巴, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Alibaba.svg}
+  - {name: 哔哩哔哩, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Bilibili.svg}
+  - {name: 喜马拉雅, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Ximalaya.svg}
+  - {name: 酷狗, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Kugou.svg}
+  - {name: 抖音, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Douyin.svg}
+  - {name: 快手, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Kuaishou.svg}
+  - {name: 斗鱼, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Douyu.svg}
+  - {name: 虎牙, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Huya.svg}
+  - {name: 爱奇艺, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Iqiyi.svg}
+  - {name: 优酷, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Youku.svg}
+  - {name: 微信, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Wechat.svg}
+  - {name: 美团, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Meituan.svg}
+  - {name: 滴滴, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Didi.svg}
+  - {name: 拼多多, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Pinduoduo.svg}
+  - {name: 京东, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Jingdong.svg}
+  - {name: 小红书, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Xiaohongshu.svg}
+  - {name: 多邻国, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Duolingo.svg}
+  - {name: 百度, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Baidu.svg}
+  - {name: 知乎, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Zhihu.svg}
+  - {name: 58同城, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/58tongcheng.svg}
+  - {name: 携程, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Xiecheng.svg}
+  - {name: 腾讯, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Tencent.svg}
+  - {name: 网易, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Wangyi.svg}
+  - {name: 小米, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Xiaomi.svg}
+  - {name: 华为, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Huawei.svg}
+  - {name: 新浪, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Sina.svg}
+  - {name: 米哈游, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Mihoyo.svg}
+  - {name: 字节跳动, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/ByteDance.svg}
+  - {name: 搜狗, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Sogou.svg}
+  # - {name: Test, <<: *domestic, icon: https://raw.githubusercontent.com/Koolson/Qure/refs/heads/master/IconSet/Color/Available.png}
+  - {name: 下载, <<: *domestic, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Download.svg}
+  - {name: Apple, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Apple.svg}
+  - {name: 推送服务, type: url-test, <<: *abroad, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Server.svg}
+  - {name: OneDrive, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/OneDrive.svg}
+  - {name: Nvidia, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Nvidia.svg}
+  - {name: 国内, <<: *domestic, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/cn.svg}
+  - {name: 国外, type: url-test, <<: *abroad, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/xx.svg}
+  - {name: 其它流量, <<: *domestic, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/other.svg}
+  - {name: 拦截, <<: *Interrupt, hidden: true, icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/reject.svg}
+
+ # 节点分流组
+  - name: 亚洲大陆
+    <<: *proxies-Asia
+  - name: 欧洲大陆
+    <<: *proxies-Europe
+  - name: 非洲大陆
+    <<: *proxies-Africa
+  - name: 北美洲大陆
+    <<: *proxies-NorthAmerica
+  - name: 南美洲大陆
+    <<: *proxies-SouthAmerica
+  - name: 大洋洲大陆
+    <<: *proxies-Oceania
+
+  - name: 香港地区
+    <<: *regionTemplate
+    filter: *filter-HK
+    exclude-filter: *Exclude-filter
+    icon: *icon-HK
+  - name: 日本地区
+    <<: *regionTemplate
+    filter: *filter-JP
+    exclude-filter: *Exclude-filter
+    icon: *icon-JP
+  - name: 台湾地区
+    <<: *regionTemplate
+    filter: *filter-TW
+    exclude-filter: *Exclude-filter
+    icon: *icon-TW
+  - name: 澳门地区
+    <<: *regionTemplate
+    filter: *filter-MO
+    exclude-filter: *Exclude-filter
+    icon: *icon-MO
+  - name: 新加坡地区
+    <<: *regionTemplate
+    filter: *filter-SG
+    exclude-filter: *Exclude-filter
+    icon: *icon-SG
+  - name: 越南地区
+    <<: *regionTemplate
+    filter: *filter-VN
+    exclude-filter: *Exclude-filter
+    icon: *icon-VN
+  - name: 韩国地区
+    <<: *regionTemplate
+    filter: *filter-KR
+    exclude-filter: *Exclude-filter
+    icon: *icon-KR
+  - name: 印度地区
+    <<: *regionTemplate
+    filter: *filter-IN
+    exclude-filter: *Exclude-filter
+    icon: *icon-IN
+  - name: 马来西亚地区
+    <<: *regionTemplate
+    filter: *filter-MY
+    exclude-filter: *Exclude-filter
+    icon: *icon-MY
+  - name: 柬埔寨地区
+    <<: *regionTemplate
+    filter: *filter-KH
+    exclude-filter: *Exclude-filter
+    icon: *icon-KH
+  - name: 泰国地区
+    <<: *regionTemplate
+    filter: *filter-TH
+    exclude-filter: *Exclude-filter
+    icon: *icon-TH
+  - name: 菲律宾地区
+    <<: *regionTemplate
+    filter: *filter-PH
+    exclude-filter: *Exclude-filter
+    icon: *icon-PH
+  - name: 印度尼西亚地区
+    <<: *regionTemplate
+    filter: *filter-ID
+    exclude-filter: *Exclude-filter
+    icon: *icon-ID
+  - name: 阿联酋地区
+    <<: *regionTemplate
+    filter: *filter-AE
+    exclude-filter: *Exclude-filter
+    icon: *icon-AE
+  - name: 孟加拉地区
+    <<: *regionTemplate
+    filter: *filter-BD
+    exclude-filter: *Exclude-filter
+    icon: *icon-BD
+  - name: 哈萨克斯坦地区
+    <<: *regionTemplate
+    filter: *filter-KZ
+    exclude-filter: *Exclude-filter
+    icon: *icon-KZ
+  - name: 阿塞拜疆地区
+    <<: *regionTemplate
+    filter: *filter-AZ
+    exclude-filter: *Exclude-filter
+    icon: *icon-AZ
+  - name: 以色列地区
+    <<: *regionTemplate
+    filter: *filter-IL
+    exclude-filter: *Exclude-filter
+    icon: *icon-IL
+  - name: 沙特阿拉伯地区
+    <<: *regionTemplate
+    filter: *filter-SA
+    exclude-filter: *Exclude-filter
+    icon: *icon-SA
+
+  - name: 俄罗斯地区
+    <<: *regionTemplate
+    filter: *filter-RU
+    exclude-filter: *Exclude-filter
+    icon: *icon-RU
+  - name: 德国地区
+    <<: *regionTemplate
+    filter: *filter-DE
+    exclude-filter: *Exclude-filter
+    icon: *icon-DE
+  - name: 英国地区
+    <<: *regionTemplate
+    filter: *filter-GB
+    exclude-filter: *Exclude-filter
+    icon: *icon-GB
+  - name: 法国地区
+    <<: *regionTemplate
+    filter: *filter-FR
+    exclude-filter: *Exclude-filter
+    icon: *icon-FR
+  - name: 荷兰地区
+    <<: *regionTemplate
+    filter: *filter-NL
+    exclude-filter: *Exclude-filter
+    icon: *icon-NL
+  - name: 土耳其地区
+    <<: *regionTemplate
+    filter: *filter-TR
+    exclude-filter: *Exclude-filter
+    icon: *icon-TR
+  - name: 西班牙地区
+    <<: *regionTemplate
+    filter: *filter-ES
+    exclude-filter: *Exclude-filter
+    icon: *icon-ES
+  - name: 匈牙利地区
+    <<: *regionTemplate
+    filter: *filter-HU
+    exclude-filter: *Exclude-filter
+    icon: *icon-HU
+  - name: 北马其顿地区
+    <<: *regionTemplate
+    filter: *filter-MK
+    exclude-filter: *Exclude-filter
+    icon: *icon-MK
+  - name: 摩尔多瓦地区
+    <<: *regionTemplate
+    filter: *filter-MD
+    exclude-filter: *Exclude-filter
+    icon: *icon-MD
+  - name: 波兰地区
+    <<: *regionTemplate
+    filter: *filter-PL
+    exclude-filter: *Exclude-filter
+    icon: *icon-PL
+  - name: 冰岛地区
+    <<: *regionTemplate
+    filter: *filter-IS
+    exclude-filter: *Exclude-filter
+    icon: *icon-IS
+  - name: 挪威地区
+    <<: *regionTemplate
+    filter: *filter-NO
+    exclude-filter: *Exclude-filter
+    icon: *icon-NO
+  - name: 丹麦地区
+    <<: *regionTemplate
+    filter: *filter-DK
+    exclude-filter: *Exclude-filter
+    icon: *icon-DK
+  - name: 意大利地区
+    <<: *regionTemplate
+    filter: *filter-IT
+    exclude-filter: *Exclude-filter
+    icon: *icon-IT
+  - name: 奥地利地区
+    <<: *regionTemplate
+    filter: *filter-AT
+    exclude-filter: *Exclude-filter
+    icon: *icon-AT
+  - name: 比利时地区
+    <<: *regionTemplate
+    filter: *filter-BE
+    exclude-filter: *Exclude-filter
+    icon: *icon-BE
+  - name: 葡萄牙地区
+    <<: *regionTemplate
+    filter: *filter-PT
+    exclude-filter: *Exclude-filter
+    icon: *icon-PT
+  - name: 罗马尼亚地区
+    <<: *regionTemplate
+    filter: *filter-RO
+    exclude-filter: *Exclude-filter
+    icon: *icon-RO
+  - name: 乌克兰地区
+    <<: *regionTemplate
+    filter: *filter-UA
+    exclude-filter: *Exclude-filter
+    icon: *icon-UA
+  - name: 拉脱维亚地区
+    <<: *regionTemplate
+    filter: *filter-LV
+    exclude-filter: *Exclude-filter
+    icon: *icon-LV
+  - name: 卢森堡地区
+    <<: *regionTemplate
+    filter: *filter-LU
+    exclude-filter: *Exclude-filter
+    icon: *icon-LU
+  - name: 列支敦士登地区
+    <<: *regionTemplate
+    filter: *filter-LI
+    exclude-filter: *Exclude-filter
+    icon: *icon-LI
+  - name: 摩纳哥地区
+    <<: *regionTemplate
+    filter: *filter-MC
+    exclude-filter: *Exclude-filter
+    icon: *icon-MC
+  - name: 保加利亚地区
+    <<: *regionTemplate
+    filter: *filter-BG
+    exclude-filter: *Exclude-filter
+    icon: *icon-BG
+  - name: 瑞士地区
+    <<: *regionTemplate
+    filter: *filter-CH
+    exclude-filter: *Exclude-filter
+    icon: *icon-CH
+
+  - name: 南非地区
+    <<: *regionTemplate
+    filter: *filter-ZA
+    exclude-filter: *Exclude-filter
+    icon: *icon-ZA
+  - name: 摩洛哥地区
+    <<: *regionTemplate
+    filter: *filter-MA
+    exclude-filter: *Exclude-filter
+    icon: *icon-MA
+  - name: 肯尼亚地区
+    <<: *regionTemplate
+    filter: *filter-KE
+    exclude-filter: *Exclude-filter
+    icon: *icon-KE
+  - name: 埃及地区
+    <<: *regionTemplate
+    filter: *filter-EG
+    exclude-filter: *Exclude-filter
+    icon: *icon-EG
+  - name: 尼日利亚地区
+    <<: *regionTemplate
+    filter: *filter-NG
+    exclude-filter: *Exclude-filter
+    icon: *icon-NG
+  - name: 加纳地区
+    <<: *regionTemplate
+    filter: *filter-GH
+    exclude-filter: *Exclude-filter
+    icon: *icon-GH
+  - name: 阿尔及利亚地区
+    <<: *regionTemplate
+    filter: *filter-DZ
+    exclude-filter: *Exclude-filter
+    icon: *icon-DZ
+  - name: 突尼斯地区
+    <<: *regionTemplate
+    filter: *filter-TN
+    exclude-filter: *Exclude-filter
+    icon: *icon-TN
+  - name: 乌干达地区
+    <<: *regionTemplate
+    filter: *filter-UG
+    exclude-filter: *Exclude-filter
+    icon: *icon-UG
+  - name: 坦桑尼亚地区
+    <<: *regionTemplate
+    filter: *filter-TZ
+    exclude-filter: *Exclude-filter
+    icon: *icon-TZ
+  - name: 埃塞俄比亚地区
+    <<: *regionTemplate
+    filter: *filter-ET
+    exclude-filter: *Exclude-filter
+    icon: *icon-ET
+  - name: 安哥拉地区
+    <<: *regionTemplate
+    filter: *filter-AO
+    exclude-filter: *Exclude-filter
+    icon: *icon-AO
+  - name: 赞比亚地区
+    <<: *regionTemplate
+    filter: *filter-ZM
+    exclude-filter: *Exclude-filter
+    icon: *icon-ZM
+  - name: 津巴布韦地区
+    <<: *regionTemplate
+    filter: *filter-ZW
+    exclude-filter: *Exclude-filter
+    icon: *icon-ZW
+  - name: 利比亚地区
+    <<: *regionTemplate
+    filter: *filter-LY
+    exclude-filter: *Exclude-filter
+    icon: *icon-LY
+  - name: 索马里地区
+    <<: *regionTemplate
+    filter: *filter-SO
+    exclude-filter: *Exclude-filter
+    icon: *icon-SO
+  - name: 马达加斯加地区
+    <<: *regionTemplate
+    filter: *filter-MG
+    exclude-filter: *Exclude-filter
+    icon: *icon-MG
+  - name: 毛里求斯地区
+    <<: *regionTemplate
+    filter: *filter-MU
+    exclude-filter: *Exclude-filter
+    icon: *icon-MU
+
+  - name: 美国地区
+    <<: *regionTemplate
+    filter: *filter-US
+    exclude-filter: *Exclude-filter
+    icon: *icon-US
+  - name: 加拿大地区
+    <<: *regionTemplate
+    filter: *filter-CA
+    exclude-filter: *Exclude-filter
+    icon: *icon-CA
+  - name: 墨西哥地区
+    <<: *regionTemplate
+    filter: *filter-MX
+    exclude-filter: *Exclude-filter
+    icon: *icon-MX
+  - name: 古巴地区
+    <<: *regionTemplate
+    filter: *filter-CU
+    exclude-filter: *Exclude-filter
+    icon: *icon-CU
+  - name: 多米尼加共和国地区
+    <<: *regionTemplate
+    filter: *filter-DO
+    exclude-filter: *Exclude-filter
+    icon: *icon-DO
+  - name: 海地地区
+    <<: *regionTemplate
+    filter: *filter-HT
+    exclude-filter: *Exclude-filter
+    icon: *icon-HT
+  - name: 牙买加地区
+    <<: *regionTemplate
+    filter: *filter-JM
+    exclude-filter: *Exclude-filter
+    icon: *icon-JM
+  - name: 巴哈马地区
+    <<: *regionTemplate
+    filter: *filter-BS
+    exclude-filter: *Exclude-filter
+    icon: *icon-BS
+  - name: 巴巴多斯地区
+    <<: *regionTemplate
+    filter: *filter-BB
+    exclude-filter: *Exclude-filter
+    icon: *icon-BB
+  - name: 伯利兹地区
+    <<: *regionTemplate
+    filter: *filter-BZ
+    exclude-filter: *Exclude-filter
+    icon: *icon-BZ
+  - name: 巴拿马地区
+    <<: *regionTemplate
+    filter: *filter-PA
+    exclude-filter: *Exclude-filter
+    icon: *icon-PA
+  - name: 危地马拉地区
+    <<: *regionTemplate
+    filter: *filter-GT
+    exclude-filter: *Exclude-filter
+    icon: *icon-GT
+  - name: 洪都拉斯地区
+    <<: *regionTemplate
+    filter: *filter-HN
+    exclude-filter: *Exclude-filter
+    icon: *icon-HN
+  - name: 尼加拉瓜地区
+    <<: *regionTemplate
+    filter: *filter-NI
+    exclude-filter: *Exclude-filter
+    icon: *icon-NI
+
+  - name: 巴西地区
+    <<: *regionTemplate
+    filter: *filter-BR
+    exclude-filter: *Exclude-filter
+    icon: *icon-BR
+  - name: 阿根廷地区
+    <<: *regionTemplate
+    filter: *filter-AR
+    exclude-filter: *Exclude-filter
+    icon: *icon-AR
+  - name: 智利地区
+    <<: *regionTemplate
+    filter: *filter-CL
+    exclude-filter: *Exclude-filter
+    icon: *icon-CL
+  - name: 哥伦比亚地区
+    <<: *regionTemplate
+    filter: *filter-CO
+    exclude-filter: *Exclude-filter
+    icon: *icon-CO
+  - name: 秘鲁地区
+    <<: *regionTemplate
+    filter: *filter-PE
+    exclude-filter: *Exclude-filter
+    icon: *icon-PE
+  - name: 乌拉圭地区
+    <<: *regionTemplate
+    filter: *filter-UY
+    exclude-filter: *Exclude-filter
+    icon: *icon-UY
+  - name: 玻利维亚地区
+    <<: *regionTemplate
+    filter: *filter-BO
+    exclude-filter: *Exclude-filter
+    icon: *icon-BO
+  - name: 巴拉圭地区
+    <<: *regionTemplate
+    filter: *filter-PY
+    exclude-filter: *Exclude-filter
+    icon: *icon-PY
+  - name: 圭亚那地区
+    <<: *regionTemplate
+    filter: *filter-GY
+    exclude-filter: *Exclude-filter
+    icon: *icon-GY
+  - name: 苏里南地区
+    <<: *regionTemplate
+    filter: *filter-SR
+    exclude-filter: *Exclude-filter
+    icon: *icon-SR
+  - name: 委内瑞拉地区
+    <<: *regionTemplate
+    filter: *filter-VE
+    exclude-filter: *Exclude-filter
+    icon: *icon-VE
+  - name: 厄瓜多尔地区
+    <<: *regionTemplate
+    filter: *filter-EC
+    exclude-filter: *Exclude-filter
+    icon: *icon-EC
+
+  - name: 澳大利亚地区
+    <<: *regionTemplate
+    filter: *filter-AU
+    exclude-filter: *Exclude-filter
+    icon: *icon-AU
+  - name: 新西兰地区
+    <<: *regionTemplate
+    filter: *filter-NZ
+    exclude-filter: *Exclude-filter
+    icon: *icon-NZ
+  - name: 巴布亚新几内亚地区
+    <<: *regionTemplate
+    filter: *filter-PG
+    exclude-filter: *Exclude-filter
+    icon: *icon-PG
+  - name: 斐济地区
+    <<: *regionTemplate
+    filter: *filter-FJ
+    exclude-filter: *Exclude-filter
+    icon: *icon-FJ
+  - name: 所罗门群岛地区
+    <<: *regionTemplate
+    filter: *filter-SB
+    exclude-filter: *Exclude-filter
+    icon: *icon-SB
+  - name: 瓦努阿图地区
+    <<: *regionTemplate
+    filter: *filter-VU
+    exclude-filter: *Exclude-filter
+    icon: *icon-VU
+  - name: 萨摩亚地区
+    <<: *regionTemplate
+    filter: *filter-WS
+    exclude-filter: *Exclude-filter
+    icon: *icon-WS
+  - name: 汤加地区
+    <<: *regionTemplate
+    filter: *filter-TO
+    exclude-filter: *Exclude-filter
+    icon: *icon-TO
+  - name: 基里巴斯地区
+    <<: *regionTemplate
+    filter: *filter-KI
+    exclude-filter: *Exclude-filter
+    icon: *icon-KI
+  - name: 密克罗尼西亚地区
+    <<: *regionTemplate
+    filter: *filter-FM
+    exclude-filter: *Exclude-filter
+    icon: *icon-FM
+  - name: 马绍尔群岛地区
+    <<: *regionTemplate
+    filter: *filter-MH
+    exclude-filter: *Exclude-filter
+    icon: *icon-MH
+  - name: 瑙鲁地区
+    <<: *regionTemplate
+    filter: *filter-NR
+    exclude-filter: *Exclude-filter
+    icon: *icon-NR
+  - name: 帕劳地区
+    <<: *regionTemplate
+    filter: *filter-PW
+    exclude-filter: *Exclude-filter
+    icon: *icon-PW
+  - name: 图瓦卢地区
+    <<: *regionTemplate
+    filter: *filter-TV
+    exclude-filter: *Exclude-filter
+    icon: *icon-TV
+
+  - name: CF优选 # CloudFlare优选组只测EdgeTunnel订阅的节点 负载均衡 轮询
+    type: load-balance
+    strategy: consistent-hashing # consistent-hashing 表示负载均衡策略为一致性散列Hash | round-robin 表示负载均衡策略为轮询
+    use: [EdgeTunnel]
+    include-self: false
+    interval: 300
+    hidden: true
+    icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/good.svg
+
+  - name: 所有-手选 # 所有节点手动选择 手动选择包含了所有节点
+    type: select
+    include-all: true
+    include-self: false
+    filter: "^((?!(DIRECT|REJECT)).)*$"
+    exclude-filter: "(CF优选|DIRECT|REJECT|CN|中国|回国)"
+    icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/Manual.svg
+    proxies: [PASS]
+
+  - name: 所有-智选 # 所有节点smart智能选择 智能选择引用useProviders的节点，去掉了垃圾订阅
+    <<: *regionTemplate
+    lazy: false
+    filter: "^((?!(DIRECT|REJECT)).)*$"
+    exclude-filter: "(CF优选|DIRECT|REJECT|CN|中国|回国)"
+    icon: https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/icon/auto.svg
+
+script: # 脚本引擎
+  engine: expr # starlark 功能更强但更慢（10-20倍）
+  shortcuts:
+    browser: resolve_process_name() in ['chrome', 'firefox', 'edge'] # 浏览器进程
+
+rules: # 规则引擎
+
+  - RULE-SET,Mine_Direct,国内
+  - RULE-SET,Mine_Proxy,国外
+  - RULE-SET,Mine_Reject,拦截
+  - RULE-SET,Download_list,下载
+  - RULE-SET,ChinaDNS,国内,no-resolve
+
+  - RULE-SET,LocalAreaNetwork,DIRECT,no-resolve
+
+  - RULE-SET,SpeedTest_CN_list,国内测试
+  - RULE-SET,SpeedTest_XX_list,国外测试
+  # - RULE-SET,TEST_list,Test
+
+  - RULE-SET,Block_list,拦截
+  - RULE-SET,BanAD_list,拦截
+  - RULE-SET,BanEasyList_list,拦截
+  - RULE-SET,BanEasyListChina_list,拦截
+  - RULE-SET,BanEasyPrivacy_list,拦截
+  - RULE-SET,BanProgramAD_list,拦截
+  - RULE-SET,BanBaidu_list,拦截
+  - RULE-SET,BanBytedance_list,拦截
+  - RULE-SET,BanZhihu_list,拦截
+  - RULE-SET,BanJingdong_list,拦截
+  - RULE-SET,BanIqiyi_list,拦截
+  - RULE-SET,BanYahoo_list,拦截
+  - RULE-SET,BanNetease_list,拦截
+  - RULE-SET,BanMihoyo_list,拦截
+  - RULE-SET,BanXiaomi_list,拦截
+  - RULE-SET,BanHuawei_list,拦截
+  - RULE-SET,BanXimalaya_list,拦截
+  - RULE-SET,BanAliyun_list,拦截
+  - RULE-SET,BanYandex_list,拦截
+  - RULE-SET,BanYouku_list,拦截
+  - RULE-SET,BanSogou_list,拦截
+  - RULE-SET,BanSina_list,拦截
+  - RULE-SET,BanYoutube_list,拦截
+  - RULE-SET,BanPixiv_list,拦截
+  - RULE-SET,BanKugou_list,拦截
+  - RULE-SET,BanDuolingo_list,拦截
+
+  - RULE-SET,Ai_list,人工智能
+  - RULE-SET,OpenAI_list,人工智能
+  - RULE-SET,OpenAI_mrs,人工智能
+  - RULE-SET,Claude_list,人工智能
+  - RULE-SET,MetaAI_list,人工智能
+  - RULE-SET,Grok_list,人工智能
+  - RULE-SET,Perplexity_mrs,人工智能
+  - RULE-SET,AppleAI_list,人工智能
+  - RULE-SET,Gemini_list,人工智能
+  - RULE-SET,Copilot_list,人工智能
+  - RULE-SET,DeepSeek_mrs,DeepSeek
+
+  - RULE-SET,GitHub_mrs,GitHub
+  - RULE-SET,Telegram_list,Telegram
+  - RULE-SET,Telegram_mrs,Telegram
+  - RULE-SET,TelegramIP_mrs,Telegram,no-resolve
+  - RULE-SET,WeChat_list,微信
+  - RULE-SET,DingTalk_mrs,钉钉
+  - RULE-SET,Feishu_mrs,飞书
+
+  - RULE-SET,LINE_mrs,LINE
+  - RULE-SET,X_list,Twitter(X)
+  - RULE-SET,Twitter_mrs,Twitter(X)
+  - RULE-SET,Twitter_list,Twitter(X)
+  - RULE-SET,TwitterIP_mrs,Twitter(X),no-resolve
+  - RULE-SET,TwitterIP_list,Twitter(X),no-resolve
+  - RULE-SET,Threads_mrs,Threads
+  - RULE-SET,Instagram_mrs,Instagram
+  - RULE-SET,WhatsApp_mrs,WhatsApp
+  - RULE-SET,WhatsApp_list,WhatsApp
+  - RULE-SET,Facebook_mrs,Facebook
+  - RULE-SET,Reddit_mrs,Reddit
+  - RULE-SET,Discord_mrs,Discord
+  - RULE-SET,Zhihu_mrs,知乎
+  - RULE-SET,Xiaohongshu_mrs,小红书
+  - RULE-SET,Sina_mrs,新浪
+
+  - RULE-SET,Youtube_mrs,YouTube
+  - RULE-SET,Pixiv_mrs,Pixiv
+  - RULE-SET,Pornhub_mrs,情涩
+  - RULE-SET,Porn_list,情涩
+  - RULE-SET,Porn_Minelist,情涩
+  - RULE-SET,ehentai_list,情涩
+  - RULE-SET,18comic_list,情涩
+  - RULE-SET,TikTok_mrs,TikTok
+  - RULE-SET,Netflix_list,Netflix
+  - RULE-SET,NetflixIP_list,Netflix,no-resolve
+  - RULE-SET,Netflix_mrs,Netflix
+  - RULE-SET,NetflixIP_mrs,Netflix,no-resolve
+  - RULE-SET,Disney_mrs,Disney
+  - RULE-SET,Disney_list,Disney
+  - RULE-SET,DisneyPlus_list,Disney
+  - RULE-SET,HBO_mrs,HBO
+  - RULE-SET,Twitch_mrs,Twitch
+  - RULE-SET,Spotify_mrs,Spotify
+  - RULE-SET,Kugou_mrs,酷狗
+  - RULE-SET,Douyin_mrs,抖音
+  - RULE-SET,Douyin_list,抖音
+  - RULE-SET,Kuaishou_mrs,快手
+  - RULE-SET,Douyu_mrs,斗鱼
+  - RULE-SET,Huya_mrs,虎牙
+  - RULE-SET,Iqiyi_mrs,爱奇艺
+  - RULE-SET,Youku_mrs,优酷
+  - RULE-SET,Duolingo_mrs,多邻国
+  - RULE-SET,TencentVideo_list,腾讯
+  - RULE-SET,Ximalaya_mrs,喜马拉雅
+  - RULE-SET,Bilibili_mrs,哔哩哔哩
+
+  - RULE-SET,Steam_mrs,Steam
+  - RULE-SET,Epic_list,Game
+  - RULE-SET,EA_list,Game
+  - RULE-SET,Blizzard_mrs,Game
+  - RULE-SET,Blizzard_list,Game
+  - RULE-SET,UBI_list,Game
+  - RULE-SET,PlayStation_mrs,Game
+  - RULE-SET,PlayStation_list,Game
+  - RULE-SET,Nintendo_mrs,Game
+  - RULE-SET,Nintendo_list,Game
+  - RULE-SET,TencentLolm_list,腾讯
+  - RULE-SET,Mihoyo_mrs,米哈游
+
+  # - RULE-SET,OKX_mrs,金融交易
+  # - RULE-SET,Bybit_mrs,金融交易
+  # - RULE-SET,Binance_mrs,金融交易
+  # - RULE-SET,Crypto_list,金融交易
+
+  - RULE-SET,AppleAPNS_list,推送服务
+  - RULE-SET,ApplePush_list,推送服务
+  - RULE-SET,GoogleFCM_mrs,推送服务
+  - RULE-SET,AppleNews_list,Apple
+  - RULE-SET,AppleTV_list,Apple
+  - RULE-SET,Apple-CN_mrs,Apple
+  - RULE-SET,Apple_mrs,Apple
+  - RULE-SET,AppleIP_mrs,Apple,no-resolve
+  - RULE-SET,Apple_list,Apple
+  - RULE-SET,CloudFlareIP_list,CloudFlare,no-resolve
+  - RULE-SET,CloudFlare_mrs,CloudFlare
+  - RULE-SET,CloudFlare_list,CloudFlare
+  - RULE-SET,OneDrive_mrs,OneDrive
+  - RULE-SET,OneDrive_list,OneDrive
+  - RULE-SET,Microsoft_list,Microsoft
+  - RULE-SET,Microsoft_mrs,Microsoft
+  - RULE-SET,Aliyun_mrs,阿里云
+  - RULE-SET,Huaweicloud_mrs,华为云
+  - RULE-SET,Meituan_mrs,美团
+  - RULE-SET,Didi_mrs,滴滴
+  - RULE-SET,Baidu_list,百度
+  - RULE-SET,Tencent_mrs,腾讯
+  - RULE-SET,Netease_mrs,网易
+  - RULE-SET,Xiaomi_mrs,小米
+  - RULE-SET,Huawei_mrs,华为
+  - RULE-SET,Xiecheng_mrs,携程
+  - RULE-SET,Wikipedia_list,Wikipedia
+  - RULE-SET,Yahoo_mrs,Yahoo
+  - RULE-SET,Yandex_mrs,Yandex
+  - RULE-SET,Duckduckgo_mrs,Duckduckgo
+  - RULE-SET,Google_list,Google
+  - RULE-SET,Google_mrs,Google
+  - RULE-SET,GoogleIP_mrs,Google,no-resolve
+  - RULE-SET,Amazon_list,Amazon
+  - RULE-SET,AmazonIP_list,Amazon,no-resolve
+  - RULE-SET,Amazon_mrs,Amazon
+  - RULE-SET,Pinduoduo_mrs,拼多多
+  - RULE-SET,Jingdong_mrs,京东
+  - RULE-SET,58tongcheng_mrs,58同城
+  - RULE-SET,Sogou_mrs,搜狗
+  - RULE-SET,Alibaba_mrs,阿里巴巴
+  - RULE-SET,Alibaba_list,阿里巴巴
+  - RULE-SET,Bytedance_mrs,字节跳动
+  - RULE-SET,Nvidia_mrs,Nvidia
+
+  - RULE-SET,Proxy_mrs,国外
+  - RULE-SET,Proxy_list,国外
+  - RULE-SET,Globe_list,国外
+  - RULE-SET,GateFireWall_mrs,国外
+
+  - RULE-SET,ChinaDNS_list,国内
+  - RULE-SET,ChinaOneKeyLogin_list,国内
+  - RULE-SET,China_mrs,国内
+  - RULE-SET,ChinaIP_mrs,国内,no-resolve
+  - RULE-SET,CNIP_mrs,国内,no-resolve
+  - RULE-SET,CNIP_list,国内,no-resolve
+  - RULE-SET,Direct_list,国内
+  - RULE-SET,Private_mrs,国内
+  - GEOIP,CN,国内,no-resolve
+
+  - MATCH,其它流量
+
+rule-providers: # 规则集提供者
+
+ # 1. 自定义规则（最高优先级）
+  Mine_Proxy: {<<: *class_text, url: "https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/list/Mine_Proxy.list"}
+  Mine_Direct: {<<: *class_text, url: "https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/list/Mine_Direct.list"}
+  Mine_Reject: {<<: *class_text, url: "https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/list/Mine_Reject.list"}
+  ChinaDNS: {<<: *class_text, url: "https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/list/ChinaDNS.list"}
+
+ # 2. 局域网
+  LocalAreaNetwork: {<<: *class_text, url: "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/LocalAreaNetwork.list"}
+
+ # 3. 广告 / 隐私拦截
+  Block_list: {<<: *class_text, url: "https://raw.githubusercontent.com/liandu2024/clash/refs/heads/main/list/Block.list"}
+  BanAD_list: {<<: *class_text, url: "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/BanAD.list"}
+  BanEasyList_list: {<<: *class_text, url: "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/BanEasyList.list"}
+  BanEasyListChina_list: {<<: *class_text, url: "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/BanEasyListChina.list"}
+  BanEasyPrivacy_list: {<<: *class_text, url: "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/BanEasyPrivacy.list"}
+  BanProgramAD_list: {<<: *class_text, url: "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/BanProgramAD.list"}
+  BanBaidu_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/baidu%40ads.list"}
+  BanBytedance_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/bytedance%40ads.list"}
+  BanZhihu_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/zhihu%40ads.list"}
+  BanJingdong_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/jd%40ads.list"}
+  BanIqiyi_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/iqiyi%40ads.list"}
+  BanYahoo_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/yahoo%40ads.list"}
+  BanNetease_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/netease%40ads.list"}
+  BanMihoyo_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/mihoyo%40ads.list"}
+  BanXiaomi_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/xiaomi%40ads.list"}
+  BanHuawei_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/huawei%40ads.list"}
+  BanXimalaya_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/ximalaya%40ads.list"}
+  BanAliyun_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/aliyun%40ads.list"}
+  BanYandex_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/yandex%40ads.list"}
+  BanYouku_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/youku%40ads.list"}
+  BanSogou_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/sogou%40ads.list"}
+  BanSina_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/sina%40ads.list"}
+  BanYoutube_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/youtube%40ads.list"}
+  BanPixiv_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/pixiv%40ads.list"}
+  BanKugou_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/kugou%40ads.list"}
+  BanDuolingo_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/duolingo%40ads.list"}
+
+ # 4. AI 服务
+  OpenAI_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/openai.mrs"}
+  OpenAI_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/openai.list"}
+  Claude_list: {<<: *class_text, url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Clash/Claude/Claude.list"}
+  Grok_list: {<<: *class_text, url: "https://raw.githubusercontent.com/cutethotw/ClashRule/refs/heads/main/Rule/Grok.list"}
+  MetaAI_list: {<<: *class_text, url: "https://raw.githubusercontent.com/liandu2024/clash/refs/heads/main/list/MetaAi.list"}
+  Perplexity_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/perplexity.mrs"}
+  AppleAI_list: {<<: *class_text, url: "https://raw.githubusercontent.com/liandu2024/clash/refs/heads/main/list/AppleAI.list"}
+  Gemini_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/google-gemini.list"}
+  Ai_list: {<<: *class_text, url: "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/Ruleset/AI.list"}
+  DeepSeek_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/deepseek.mrs"}
+
+ # 5. 开发者 / 通讯
+  GitHub_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/github.mrs"}
+  Telegram_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/telegram.list"}
+  Telegram_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/telegram.mrs"}
+  TelegramIP_mrs: {<<: *ip_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geoip/telegram.mrs"}
+  WeChat_list: {<<: *class_text, url: "https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/list/WeChat.list"}
+  DingTalk_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/dingtalk.mrs"}
+  Feishu_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/feishu.mrs"}
+
+ # 6. 社交媒体
+  LINE_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/line.mrs"}
+  Twitter_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/x.mrs"}
+  Twitter_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/twitter.list"}
+  X_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/x.list"}
+  TwitterIP_mrs: {<<: *ip_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geoip/twitter.mrs"}
+  TwitterIP_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geoip/classical/twitter.list"}
+  WhatsApp_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/whatsapp.mrs"}
+  WhatsApp_list: {<<: *class_text, url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Clash/Whatsapp/Whatsapp.list"}
+  Facebook_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/facebook.mrs"}
+  Threads_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/threads.mrs"}
+  Instagram_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/instagram.mrs"}
+  Reddit_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/reddit.mrs"}
+  Discord_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/discord.mrs"}
+  Zhihu_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/zhihu.mrs"}
+  Xiaohongshu_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/xiaohongshu.mrs"}
+  Sina_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/sina.mrs"}
+
+ # 7. 流媒体
+  Youtube_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/youtube.mrs"}
+  Netflix_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/netflix.list"}
+  NetflixIP_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geoip/classical/netflix.list"}
+  Netflix_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/netflix.mrs"}
+  NetflixIP_mrs: {<<: *ip_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geoip/netflix.mrs"}
+  Disney_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/disney.mrs"}
+  Disney_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/disney.list"}
+  DisneyPlus_list: {<<: *class_text, url: "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/Ruleset/DisneyPlus.list"}
+  HBO_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/hbo.mrs"}
+  Twitch_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/twitch.mrs"}
+  Spotify_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/spotify.mrs"}
+  TikTok_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/tiktok.mrs"}
+  Pixiv_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/pixiv.mrs"}
+  Pornhub_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/pornhub.mrs"}
+  Porn_list: {<<: *class_text, url: "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/Ruleset/Porn.list"}
+  Porn_Minelist: {<<: *class_text, url: "https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/list/Porn.list"}
+  ehentai_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/ehentai.list"}
+  18comic_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/18comic.list"}
+  TencentVideo_list: {<<: *class_text, url: "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/Ruleset/TencentVideo.list"}
+  Kugou_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/kugou.mrs"}
+  Bilibili_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/bilibili.mrs"}
+  Douyu_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/douyu.mrs"}
+  Huya_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/huya.mrs"}
+  Douyin_list: {<<: *class_text, url: "https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/list/Douyin.list"}
+  Douyin_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/douyin.mrs"}
+  Kuaishou_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/kuaishou.mrs"}
+  Iqiyi_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/iqiyi.mrs"}
+  Youku_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/youku.mrs"}
+  Ximalaya_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/ximalaya.mrs"}
+
+ # 8. 苹果相关服务
+  AppleAPNS_list: {<<: *class_text, url: "https://raw.githubusercontent.com/QuixoticHeart/rule-set/refs/heads/ruleset/loon/apns.list"}
+  ApplePush_list: {<<: *class_text, url: "https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/list/ApplePush.list"}
+  AppleNews_list: {<<: *class_text, url: "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/Ruleset/AppleNews.list"}
+  AppleTV_list: {<<: *class_text, url: "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/Ruleset/AppleTV.list"}
+  Apple_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/apple.mrs"}
+  Apple-CN_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/apple-cn.mrs"}
+  Apple_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/apple.list"}
+  AppleIP_mrs: {<<: *ip_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo-lite/geoip/apple.mrs"}
+
+ # 9. 云服务 / 电商
+  Aliyun_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/aliyun.mrs"}
+  Huaweicloud_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/huaweicloud.mrs"}
+  CloudFlare_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/cloudflare.mrs"}
+  CloudFlare_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/cloudflare.list"}
+  CloudFlareIP_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geoip/classical/cloudflare.list"}
+  Duolingo_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/duolingo.mrs"}
+  Pinduoduo_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/pinduoduo.mrs"}
+  Alibaba_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/alibaba.mrs"}
+  Alibaba_list: {<<: *class_text, url: "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/Ruleset/Alibaba.list"}
+  Jingdong_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/jd.mrs"}
+  Baidu_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/baidu.list"}
+  58tongcheng_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/58tongcheng.mrs"}
+  Amazon_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/amazon.list"}
+  AmazonIP_list: {<<: *class_text, url: "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/Ruleset/AmazonIp.list"}
+  Amazon_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/amazon.mrs"}
+  OneDrive_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/onedrive.mrs"}
+  OneDrive_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/onedrive.list"}
+  Microsoft_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/microsoft.list"}
+  Microsoft_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/microsoft.mrs"}
+  Copilot_list: {<<: *class_text, url: "https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/list/Copilot.list"}
+  Meituan_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/meituan.mrs"}
+  Tencent_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/tencent.mrs"}
+  Netease_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/netease.mrs"}
+  Xiaomi_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/xiaomi.mrs"}
+  Huawei_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/huawei.mrs"}
+  Didi_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/didi.mrs"}
+  Bytedance_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/bytedance.mrs"}
+  Sogou_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/sogou.mrs"}
+  Wikipedia_list: {<<: *class_text, url: "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/Ruleset/Wikipedia.list"}
+  Yandex_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/yandex.mrs"}
+  Duckduckgo_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/duckduckgo.mrs"}
+  GoogleFCM_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/googlefcm.mrs"}
+  Google_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/google.mrs"}
+  Google_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/google.list"}
+  GoogleIP_mrs: {<<: *ip_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geoip/google.mrs"}
+  Nvidia_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/nvidia.mrs"}
+  Yahoo_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/yahoo.mrs"}
+  Xiecheng_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/ctrip.mrs"}
+
+ # 10. 金融 / 加密货币
+  OKX_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/okx.mrs"}
+  Bybit_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/bybit.mrs"}
+  Binance_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/binance.mrs"}
+  Crypto_list: {<<: *class_text, url: "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/Ruleset/Crypto.list"}
+
+ # 11. 游戏
+  Steam_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/steam.mrs"}
+  Epic_list: {<<: *class_text, url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Epic/Epic.list"}
+  EA_list: {<<: *class_text, url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/EA/EA.list"}
+  Blizzard_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/blizzard.mrs"}
+  Blizzard_list: {<<: *class_text, url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Blizzard/Blizzard.list"}
+  UBI_list: {<<: *class_text, url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/UBI/UBI.list"}
+  PlayStation_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/playstation.mrs"}
+  PlayStation_list: {<<: *class_text, url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Clash/PlayStation/PlayStation.list"}
+  Nintendo_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/nintendo.mrs"}
+  Nintendo_list: {<<: *class_text, url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Nintendo/Nintendo.list"}
+  TencentLolm_list: {<<: *class_text, url: "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/Ruleset/TencentLolm.list"}
+  Mihoyo_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/mihoyo.mrs"}
+
+ # 12. 下载
+  Download_list: {<<: *class_text, url: "https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/list/Download.list"}
+
+ # 13. TEST
+  SpeedTest_CN_list: {<<: *class_text, url: "https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/list/SpeedTest_CN.list"}
+  SpeedTest_XX_list: {<<: *class_text, url: "https://raw.githubusercontent.com/han1182/ProxyRules/refs/heads/master/list/SpeedTest_XX.list"}
+  TEST_list: {<<: *class_text, url: "https://raw.githubusercontent.com/liandu2024/clash/refs/heads/main/list/Check.list"}
+
+ # 15. 国外 / 全球 / 国内兜底
+  Proxy_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo-lite/geosite/proxy.mrs"}
+  Proxy_list: {<<: *class_text, url: "https://raw.githubusercontent.com/liandu2024/clash/refs/heads/main/list/Proxy.list"}
+  Globe_list: {<<: *class_text, url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Clash/Global/Global.list"}
+  Direct_list: {<<: *class_text, url: "https://raw.githubusercontent.com/liandu2024/clash/refs/heads/main/list/Direct.list"}
+  ChinaDNS_list: {<<: *class_text, url: "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/Ruleset/ChinaDNS.list"}
+  ChinaOneKeyLogin_list: {<<: *class_text, url: "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/Ruleset/ChinaOneKeyLogin.list"}
+  China_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/cn.mrs"}
+  ChinaIP_mrs: {<<: *ip_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geoip/cn.mrs"}
+  CNIP_mrs: {<<: *ip_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geoip/cn.mrs"}
+  CNIP_list: {<<: *class_text, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geoip/classical/cn.list"}
+  Private_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/private.mrs"}
+  GateFireWall_mrs: {<<: *domain_mrs, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/gfw.mrs"}
+
+ntp: # 网络时间协议配置
+  enable: true
+  server: time.apple.com
+  port: 123
+  interval: 30
+  write-to-system: true
+  dialer-proxy: DIRECT
+
+experimental: # 实验性功能
+  sniff-tls-sni: true
+  quic-go-disable-gso: false
+  quic-go-disable-ecn: false
+  dialer-ip4p-convert: false
+  disable-udp: false
+  force-dns-mapping: true
+  tls-fragment: # TLS 分片，防主动探测效果不错
+    enable: true
+    size: 100-300 # 推荐范围
+    sleep: 10-50ms
+    udp-gso: true # 大文件下载加速（需测试）
+
+<<: *clashConfig # 引入 Clash 主配置
