@@ -25,6 +25,7 @@ DOMAIN,ctldl.windowsupdate.com
 DOMAIN-SUFFIX,time.windows.com
 DOMAIN-SUFFIX,pool.ntp.org
 
+DOMAIN-SUFFIX,szccm.com
 DOMAIN-SUFFIX,firstory.me
 DOMAIN,files.firstort-file.me
 DOMAIN,m.cdn.firstory.me
