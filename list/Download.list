@@ -15,9 +15,9 @@ DOMAIN, cr11.qweqwi.com
 DOMAIN,pcsoftcdnms.downkuai.com
 DOMAIN,d1.wcdn.date
 DOMAIN,dl1.wn01.download
-URL-REGEX,https?://.*\.wcdn\.date
-URL-REGEX,https?://.*\.wn[0-9]*\.download
-URL-REGEX,https?://.*dl[0-9]*\.wn[0-9]*\.download
+# URL-REGEX,https?://.*\.wcdn\.date
+# URL-REGEX,https?://.*\.wn[0-9]*\.download
+# URL-REGEX,https?://.*dl[0-9]*\.wn[0-9]*\.download
 
 # ==================== 精准下载 & 游戏 CDN ====================
 
@@ -37,7 +37,7 @@ DOMAIN-SUFFIX, download.microsoft.com
 DOMAIN, assets.xboxlive.com
 DOMAIN,cdn-alt.modrinth.com
 DOMAIN,files.bmcllapiiiii.online
-URL-REGEX, assets\d+\.xboxlive\.(com|cn)
+# URL-REGEX, assets\d+\.xboxlive\.(com|cn)
 
 # 其他常用下载源
 DOMAIN-SUFFIX, sourceforge.net
