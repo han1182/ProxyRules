@@ -72,10 +72,10 @@ DOMAIN-KEYWORD, aria2
 DOMAIN-KEYWORD, tracker
 DOMAIN-KEYWORD, announce
 
-URL-REGEX, (torrent|announce\.php\?passkey=|tracker|BitTorrent|bt_key|ed2k|info_hash|magnet:|peer_id=)
-URL-REGEX, (xunlei|sandai|Thunder|XLLiveUD|find_node|get_peers)
-URL-REGEX, (api|ps|sv|offnavi|newvector|ulog\.imap|newloc)(\.map|\.)\.(baidu|n\.shifen)\.com
-URL-REGEX, (\.|^)(360|so|qihoo|360safe|qhimg|360totalsecurity|yunpan)\.(cn|com)
+# URL-REGEX, (torrent|announce\.php\?passkey=|tracker|BitTorrent|bt_key|ed2k|info_hash|magnet:|peer_id=)
+# URL-REGEX, (xunlei|sandai|Thunder|XLLiveUD|find_node|get_peers)
+# URL-REGEX, (api|ps|sv|offnavi|newvector|ulog\.imap|newloc)(\.map|\.)\.(baidu|n\.shifen)\.com
+# URL-REGEX, (\.|^)(360|so|qihoo|360safe|qhimg|360totalsecurity|yunpan)\.(cn|com)
 
 # 邮件协议（强烈建议删除或改成 DIRECT）
 # DOMAIN-SUFFIX, smtp
