@@ -5,6 +5,7 @@
 
 # ==================== 特定域名 ====================
 # DOMAIN,raw.githubusercontent.com
+DOMAIN,releases.ubuntu.com
 DOMAIN,cdn-alt.modrinth.com
 DOMAIN,d-app6.i4.cn
 DOMAIN, piston-data.mojang.com
