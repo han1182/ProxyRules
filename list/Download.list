@@ -6,7 +6,6 @@
 # ==================== 特定域名 ====================
 # DOMAIN,raw.githubusercontent.com
 DOMAIN,releases.ubuntu.com
-DOMAIN,cdn-alt.modrinth.com
 DOMAIN,d-app6.i4.cn
 DOMAIN, piston-data.mojang.com
 DOMAIN-SUFFIX, webgetstore.com
@@ -37,6 +36,7 @@ DOMAIN-SUFFIX, fastly-download.epicgames.com
 DOMAIN-SUFFIX, download.microsoft.com
 DOMAIN, assets.xboxlive.com
 DOMAIN,cdn-alt.modrinth.com
+DOMAIN,meta.fabricmc.net
 DOMAIN,files.bmcllapiiiii.online
 # URL-REGEX, assets\d+\.xboxlive\.(com|cn)
 
