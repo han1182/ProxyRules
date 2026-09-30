@@ -38,8 +38,11 @@ DOMAIN-KEYWORD,itsacg
 DOMAIN-SUFFIX,qy0.ru
 DOMAIN-SUFFIX,shenshiai.net
 DOMAIN-REGEX,^www\.wn\d{2}\.cfd$
+DOMAIN-REGEX,^www\.wn\d{3}\.cfd$
 DOMAIN-REGEX,^www\.wn\d{2}\.ru$
+DOMAIN-REGEX,^www\.wn\d{3}\.ru$
 DOMAIN-REGEX,^www\.wn\d{2}\.shop$
+DOMAIN-REGEX,^www\.wn\d{3}\.shop$
 DOMAIN-SUFFIX,e-hentai.org
 DOMAIN-SUFFIX,hdoujin.org
 DOMAIN-SUFFIX,ehgt.org
