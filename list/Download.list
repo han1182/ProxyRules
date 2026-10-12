@@ -7,11 +7,11 @@
 # DOMAIN,raw.githubusercontent.com
 DOMAIN,releases.ubuntu.com
 DOMAIN,d-app6.i4.cn
-DOMAIN, piston-data.mojang.com
-DOMAIN-SUFFIX, webgetstore.com
-DOMAIN, cloudflare-ech.com
-DOMAIN, cz.197942.com
-DOMAIN, cr11.qweqwi.com
+DOMAIN,piston-data.mojang.com
+DOMAIN-SUFFIX,webgetstore.com
+DOMAIN,cloudflare-ech.com
+DOMAIN,cz.197942.com
+DOMAIN,cr11.qweqwi.com
 DOMAIN,pcsoftcdnms.downkuai.com
 DOMAIN,d1.wcdn.date
 DOMAIN,dl1.wn01.download
@@ -22,60 +22,60 @@ DOMAIN,dl1.wn01.download
 # ==================== 精准下载 & 游戏 CDN ====================
 
 # Steam 下载专用（重要）
-DOMAIN-SUFFIX, steamcontent.com
-DOMAIN-SUFFIX, steamserver.net
-DOMAIN-SUFFIX, steamstatic.com
-DOMAIN, steamcdn-a.akamaihd.net
+DOMAIN-SUFFIX,steamcontent.com
+DOMAIN-SUFFIX,steamserver.net
+DOMAIN-SUFFIX,steamstatic.com
+DOMAIN,steamcdn-a.akamaihd.net
 
 # Epic Games 下载
-DOMAIN-SUFFIX, epicgames-download1.akamaized.net
-DOMAIN-SUFFIX, download.epicgames.com
-DOMAIN-SUFFIX, fastly-download.epicgames.com
+DOMAIN-SUFFIX,epicgames-download1.akamaized.net
+DOMAIN-SUFFIX,download.epicgames.com
+DOMAIN-SUFFIX,fastly-download.epicgames.com
 
 # Microsoft / Xbox 下载
-DOMAIN-SUFFIX, download.microsoft.com
-DOMAIN, assets.xboxlive.com
+DOMAIN-SUFFIX,download.microsoft.com
+DOMAIN,assets.xboxlive.com
 DOMAIN,cdn-alt.modrinth.com
 DOMAIN,meta.fabricmc.net
 DOMAIN,files.bmcllapiiiii.online
-# URL-REGEX, assets\d+\.xboxlive\.(com|cn)
+# URL-REGEX,assets\d+\.xboxlive\.(com|cn)
 
 # 其他常用下载源
-DOMAIN-SUFFIX, sourceforge.net
-DOMAIN-SUFFIX, archive.org
-DOMAIN-SUFFIX, cdn.jsdelivr.net
-DOMAIN-SUFFIX, huggingface.co
-DOMAIN-SUFFIX, cdn-lfs.hf.co
+DOMAIN-SUFFIX,sourceforge.net
+DOMAIN-SUFFIX,archive.org
+DOMAIN-SUFFIX,cdn.jsdelivr.net
+DOMAIN-SUFFIX,huggingface.co
+DOMAIN-SUFFIX,cdn-lfs.hf.co
 
 # 中国云盘 / 下载补充
-DOMAIN-SUFFIX, baidupcs.com
-DOMAIN-SUFFIX, baidupcs.baidu.com
-DOMAIN-SUFFIX, dl.download.csdn.net
+DOMAIN-SUFFIX,baidupcs.com
+DOMAIN-SUFFIX,baidupcs.baidu.com
+DOMAIN-SUFFIX,dl.download.csdn.net
 
 # ==================== 下载器进程 ====================
-PROCESS-NAME, aria2c
-PROCESS-NAME, fdm
-PROCESS-NAME, Folx
-PROCESS-NAME, NetTransport
-PROCESS-NAME, Thunder
-PROCESS-NAME, Transmission
-PROCESS-NAME, uTorrent
-PROCESS-NAME, WebTorrent
-PROCESS-NAME, qbittorrent
-PROCESS-NAME, BitComet
-PROCESS-NAME, DownloadService
-PROCESS-NAME, Weiyun
-PROCESS-NAME, baidunetdisk
+PROCESS-NAME,aria2c
+PROCESS-NAME,fdm
+PROCESS-NAME,Folx
+PROCESS-NAME,NetTransport
+PROCESS-NAME,Thunder
+PROCESS-NAME,Transmission
+PROCESS-NAME,uTorrent
+PROCESS-NAME,WebTorrent
+PROCESS-NAME,qbittorrent
+PROCESS-NAME,BitComet
+PROCESS-NAME,DownloadService
+PROCESS-NAME,Weiyun
+PROCESS-NAME,baidunetdisk
 
 # ==================== BT & P2P ====================
-DOMAIN-KEYWORD, aria2
-DOMAIN-KEYWORD, tracker
-DOMAIN-KEYWORD, announce
+DOMAIN-KEYWORD,aria2
+DOMAIN-KEYWORD,tracker
+DOMAIN-KEYWORD,announce
 
-# URL-REGEX, (torrent|announce\.php\?passkey=|tracker|BitTorrent|bt_key|ed2k|info_hash|magnet:|peer_id=)
-# URL-REGEX, (xunlei|sandai|Thunder|XLLiveUD|find_node|get_peers)
-# URL-REGEX, (api|ps|sv|offnavi|newvector|ulog\.imap|newloc)(\.map|\.)\.(baidu|n\.shifen)\.com
-# URL-REGEX, (\.|^)(360|so|qihoo|360safe|qhimg|360totalsecurity|yunpan)\.(cn|com)
+# URL-REGEX,(torrent|announce\.php\?passkey=|tracker|BitTorrent|bt_key|ed2k|info_hash|magnet:|peer_id=)
+# URL-REGEX,(xunlei|sandai|Thunder|XLLiveUD|find_node|get_peers)
+# URL-REGEX,(api|ps|sv|offnavi|newvector|ulog\.imap|newloc)(\.map|\.)\.(baidu|n\.shifen)\.com
+# URL-REGEX,(\.|^)(360|so|qihoo|360safe|qhimg|360totalsecurity|yunpan)\.(cn|com)
 
 # 邮件协议（强烈建议删除或改成 DIRECT）
-# DOMAIN-SUFFIX, smtp
+# DOMAIN-SUFFIX,smtp
